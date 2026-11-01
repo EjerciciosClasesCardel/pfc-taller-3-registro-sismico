@@ -1,279 +1,311 @@
-# Ejemplo de informe de corrección
+# Informe de corrección
 
-Fundamentos de Programación Funcional y Concurrente.
-Documento realizado por el docente Juan Francisco Díaz.
+Este informe argumenta que las funciones de los Puntos 1 y 2 hacen lo que pide
+el enunciado. Como un `Registro` es una lista, es un conjunto definido
+recursivamente y se usa inducción estructural: el caso base es el registro
+vacío y el paso de inducción añade un sismo al frente.
 
-## 1. Argumentar la corrección de programas recursivos
+## Convenciones
 
-Sea $f : A \to B$ una función, y $A$ un conjunto definido recursivamente
-(recordar la definición de Matemáticas Discretas I), como por ejemplo los
-naturales o las listas.
+* Un `Registro` es o bien la lista vacía $`[\,]`$, o bien $s :: r'$: un sismo $s$
+  al frente de un registro $r'$.
+* De un sismo $s$ se usan $s\text{.region}$ y $s\text{.magnitud}$.
+* $|L|$ es la longitud de la lista $L$, $L_1 \mathbin{++} L_2$ es la
+  concatenación y $x \in L$ significa que $x$ aparece en $L$.
+* Decimos que $r'$ es un **reordenamiento** de $r$ si tiene los mismos sismos,
+  cada uno el mismo número de veces, aunque en otro orden.
 
-Sea $P_f$ un programa recursivo (lineal o en árbol) desarrollado en Scala (o en
-cualquier lenguaje de programación) hecho para calcular $f$:
+### Lo que se supone de la biblioteca
 
-```scala
-def Pf(a: A): B = { // Pf recibe a de tipo A, y devuelve f(a) de tipo B
-  ...
-}
-```
-
-¿Cómo argumentar que $P_f(a)$ siempre devuelve $f(a)$ como respuesta? Es decir,
-¿cómo argumentar que $P_f$ es correcto con respecto a su especificación?
-
-La respuesta es sencilla: demostrando el siguiente teorema.
+Las operaciones de listas que usa el código cumplen estas ecuaciones:
 
 ```math
-\forall a \in A : P_f(a) == f(a)
+\begin{aligned}
+\text{filter}(p, [\,]) &= [\,] \\
+\text{filter}(p, x :: xs) &= \begin{cases} x :: \text{filter}(p, xs) & \text{si } p(x) \\ \text{filter}(p, xs) & \text{si no} \end{cases} \\
+\text{map}(f, [\,]) &= [\,] \\
+\text{map}(f, x :: xs) &= f(x) :: \text{map}(f, xs) \\
+\text{flatMap}(f, [\,]) &= [\,] \\
+\text{flatMap}(f, x :: xs) &= f(x) \mathbin{++} \text{flatMap}(f, xs)
+\end{aligned}
 ```
 
-Cuando uno tiene que demostrar que algo se cumple para todos los elementos de
-un conjunto definido recursivamente, es natural usar inducción estructural. En
-términos prácticos, esto significa demostrar que:
-
-- Para cada valor básico $a$ de $A$, se tiene que $P_f(a) == f(a)$.
-- Para cada valor $a \in A$ construido recursivamente a partir de otro(s)
-  valor(es) $a' \in A$, se tiene que
-  $P_f(a') == f(a') \rightarrow P_f(a) == f(a)$. (Esta es la hipótesis de
-  inducción).
-
-### Ejemplo: factorial recursivo
-
-Sea $f : \mathbb{N} \to \mathbb{N}$ la función que calcula el factorial de un
-número natural, es decir, $f(n) = n!$. Y sea $P_f$ el siguiente programa en
-Scala:
-
-```scala
-def Pf(n: Int): Int = { // Pf recibe n de tipo Int, y devuelve n! de tipo Int
-  if (n == 0) 1 else n * Pf(n - 1)
-}
-```
-
-Vamos a demostrar que $\forall n \in \mathbb{N} : P_f(n) == n!$
-
-**Caso base:** $n = 0$
+* `e.withFilter(p).map(f)` produce el mismo resultado que
+  $\text{map}(f, \text{filter}(p, e))$, y dos `withFilter` seguidos equivalen a un
+  `filter` con la conjunción de las dos condiciones.
+* `distinct` conserva la primera aparición de cada elemento y el orden en que
+  aparecen.
+* `r.groupBy(g)` es el mapa cuyo dominio es $`\{ g(s) \mid s \in r \}`$ y que a
+  cada llave $k$ le asigna
 
 ```math
-P_f(0) \rightarrow \text{if } (0 == 0)\ 1 \text{ else } 0 \ast P_f(-1) \rightarrow 1
+\text{groupBy}(g, r)(k) = \text{filter}(s \mapsto g(s) = k,\ r)
 ```
 
-Por otro lado, $f(0) = 0! = 1$. Entonces $P_f(0) == f(0)$.
+Las comparaciones entre magnitudes se hacen en aritmética de `Double`: los
+teoremas hablan del valor que el programa calcula, y no de los reales exactos.
 
-**Caso de inducción:** $n = k + 1$, $k \geq 0$. Hay que demostrar:
-$P_f(k) == f(k) \rightarrow P_f(k + 1) == f(k + 1)$
+## Punto 1: consultas con expresiones `for`
+
+### Lema 1: filtrar y proyectar
+
+Sea $p$ un predicado, $g$ una función y $L(r) = \text{map}(g, \text{filter}(p, r))$.
+Entonces:
 
 ```math
-P_f(k+1) \rightarrow \text{if } (k+1 == 0)\ 1 \text{ else } (k+1) \ast P_f(k) \rightarrow (k+1) \ast P_f(k)
+L([\,]) = [\,] \qquad L(s :: r') = \begin{cases} g(s) :: L(r') & \text{si } p(s) \\ L(r') & \text{si no} \end{cases}
 ```
 
-Usando la hipótesis de inducción (HI):
+*Demostración.* Para el registro vacío,
+$`L([\,]) = \text{map}(g, \text{filter}(p, [\,])) = \text{map}(g, [\,]) = [\,]`$.
+Para $s :: r'$ hay dos casos. Si $p(s)$, entonces
+$\text{filter}(p, s :: r') = s :: \text{filter}(p, r')$, y
+$L(s :: r') = g(s) :: \text{map}(g, \text{filter}(p, r')) = g(s) :: L(r')$. Si no
+$p(s)$, entonces $\text{filter}(p, s :: r') = \text{filter}(p, r')$ y
+$L(s :: r') = L(r')$. $\blacksquare$
+
+### Teorema 1: `fuertes`
+
+Sea $F_1$ la función que el enunciado describe: las regiones de los sismos que
+superan el umbral, en orden y con repetidos.
 
 ```math
-\rightarrow (k+1) \ast k! = (k+1)!
+F_1([\,], u) = [\,] \qquad F_1(s :: r', u) = \begin{cases} s\text{.region} :: F_1(r', u) & \text{si } s\text{.magnitud} > u \\ F_1(r', u) & \text{si no} \end{cases}
 ```
 
-Por lo tanto, $P_f(k + 1) == f(k + 1)$.
+Vamos a demostrar que $\forall u,\ \forall r \in \text{Registro} : \texttt{fuertes}(r, u) == F_1(r, u)$.
 
-Concluimos por inducción que $\forall n \in \mathbb{N} : P_f(n) == n!$
+La función se traduce a `r.withFilter(s => s.magnitud > umbral).map(s => s.region)`,
+es decir, $\text{map}(g, \text{filter}(p, r))$ con $p(s) \equiv s\text{.magnitud} > u$ y
+$g(s) = s\text{.region}$. Por inducción sobre $r$, con $u$ fijo:
 
-### Ejemplo: el máximo de una lista
+**Caso base:** $`r = [\,]`$. Por el Lema 1, $`\texttt{fuertes}([\,], u) = [\,] = F_1([\,], u)`$.
 
-Sea $f : \text{List}[\mathbb{N}] \to \mathbb{N}$ la función que calcula el
-máximo de una lista de enteros positivos, no vacía. Y sea $P_f$ el siguiente
-programa en Scala:
-
-```scala
-def maxLin(l: List[Int]): Int = {
-  if (l.tail.isEmpty) l.head
-  else math.max(maxLin(l.tail), l.head)
-}
-```
-
-Demostraremos que:
+**Caso de inducción:** $r = s :: r'$. La hipótesis de inducción (HI) es
+$\texttt{fuertes}(r', u) == F_1(r', u)$. Si $s\text{.magnitud} > u$, por el Lema 1:
 
 ```math
-\forall n \in \mathbb{N} \setminus \{0\} : P_f(\text{List}(a_1, a_2, \ldots, a_n)) == f(\text{List}(a_1, a_2, \ldots, a_n))
+\texttt{fuertes}(s :: r', u) = s\text{.region} :: \texttt{fuertes}(r', u) \overset{\text{HI}}{=} s\text{.region} :: F_1(r', u) = F_1(s :: r', u)
 ```
 
-**Caso base:** $n = 1$
+Si no, por el Lema 1 y la HI,
+$\texttt{fuertes}(s :: r', u) = \texttt{fuertes}(r', u) = F_1(r', u) = F_1(s :: r', u)$.
+
+Concluimos por inducción que $\texttt{fuertes}(r, u) == F_1(r, u)$ para todo registro y todo
+umbral. $\blacksquare$
+
+De la definición de $F_1$ se leen las propiedades que pide el enunciado: el
+umbral es **estricto** (se usa $>$), el orden es el del registro y los
+repetidos se conservan, porque cada sismo fuerte aporta su región sin
+comparar con los demás.
+
+### Teorema 2: `enRegion`
+
+Sea $F_2$ la función que describe el enunciado: las magnitudes de los sismos de la región $x$.
 
 ```math
-P_f(\text{List}(a_1)) \rightarrow \text{if } \text{List}(a_1).\text{tail.isEmpty then } \text{List}(a_1).\text{head else } \ldots \rightarrow \text{List}(a_1).\text{head} \rightarrow a_1
+F_2([\,], x) = [\,] \qquad F_2(s :: r', x) = \begin{cases} s\text{.magnitud} :: F_2(r', x) & \text{si } s\text{.region} = x \\ F_2(r', x) & \text{si no} \end{cases}
 ```
 
-Por otro lado, $f(\text{List}(a_1)) = a_1$. Entonces
-$P_f(\text{List}(a_1)) == f(\text{List}(a_1))$.
+La función se traduce a `r.withFilter(s => s.region == region).map(s => s.magnitud)`,
+que es $\text{map}(g, \text{filter}(p, r))$ con $p(s) \equiv s\text{.region} = x$ y
+$g(s) = s\text{.magnitud}$. La demostración es la del Teorema 1 con esos $p$ y
+$g$: el caso base es el registro vacío, que da $`[\,]`$ por el Lema 1, y el paso
+añade un sismo $s$ al frente, donde el Lema 1 y la HI dan
+$\texttt{enRegion}(s :: r', x) = F_2(s :: r', x)$ en cada uno de los dos casos.
+Por lo tanto $\forall r,\ \forall x : \texttt{enRegion}(r, x) == F_2(r, x)$. En particular,
+si la región no aparece, ningún sismo cumple $p$ y el resultado es $`[\,]`$. $\blacksquare$
 
-**Caso de inducción:** $n = k + 1$, $k \geq 1$. Se debe demostrar:
+### Lema 2: cuándo un `filter`, un `map` o un `flatMap` da una lista no vacía
+
+Para toda lista $l$:
 
 ```math
-P_f(\text{List}(b_1, b_2, \ldots, b_k)) == f(\text{List}(b_1, b_2, \ldots, b_k)) \rightarrow P_f(\text{List}(a_1, a_2, \ldots, a_{k+1})) == f(\text{List}(a_1, a_2, \ldots, a_{k+1}))
+\text{filter}(p, l) \neq [\,] \iff \exists x \in l : p(x) \qquad
+\text{flatMap}(f, l) \neq [\,] \iff \exists x \in l : f(x) \neq [\,]
 ```
 
-Empecemos por calcular qué devuelve $P_f$ usando el modelo de sustitución:
+y $\text{map}(f, l)$ es vacía si y solo si $l$ es vacía, porque $\text{map}$
+conserva la longitud.
+
+*Demostración.* Por inducción sobre $l$. Para $`l = [\,]`$, las tres listas son
+vacías y no existe ningún $x \in l$. Para $l = x :: xs$, el $\text{flatMap}$ vale
+$f(x) \mathbin{++} \text{flatMap}(f, xs)$, que es no vacío si y solo si $f(x)$ es
+no vacío o $\text{flatMap}(f, xs)$ es no vacío. Por la HI, esto ocurre si y solo
+si $`f(x) \neq [\,]`$ o existe $y \in xs$ con $`f(y) \neq [\,]`$, es decir, si y solo
+si existe un elemento de $x :: xs$ con esa propiedad. El caso del
+$\text{filter}$ es igual, mirando sus dos ecuaciones. $\blacksquare$
+
+### Teorema 3: `paresCercanos`
+
+Sea $\text{regs}(r) = [a_0, a_1, \ldots, a_{k-1}]$ la lista de las regiones de $r$
+sin repetir, en el orden de su primera aparición. Sea
 
 ```math
-P_f(L) \rightarrow \text{if } L.\text{tail.isEmpty then } L.\text{head else math.max}(P_f(L.\text{tail}), L.\text{head})
+C(a, b, r, d) \equiv \exists s_1, s_2 \in r : s_1\text{.region} = a \land s_2\text{.region} = b \land |s_1\text{.magnitud} - s_2\text{.magnitud}| \leq d
 ```
+
+la condición "algún sismo de $a$ y algún sismo de $b$ difieren a lo sumo $d$". La
+función que describe el enunciado es
 
 ```math
-\rightarrow \text{math.max}(P_f(\text{List}(a_2, \ldots, a_{k+1})), a_1)
+P(r, d) = \big[\ (a_i, a_j)\ \big|\ 0 \leq i < j \leq k-1 \ \land\ C(a_i, a_j, r, d)\ \big]
 ```
 
-Sea $b = P_f(\text{List}(a_2, \ldots, a_{k+1}))$; por la hipótesis de
-inducción, $b = f(\text{List}(a_2, \ldots, a_{k+1}))$. Hay dos posibilidades:
+con las parejas ordenadas por $i$ y, a igual $i$, por $j$.
 
-- Si $\text{math.max}(b, a_1) = b$, entonces $b \geq a_1$ y
- $b == f(\text{List}(a_1, a_2, \ldots, a_{k+1}))$.
-- Si $\text{math.max}(b, a_1) = a_1$, entonces $a_1 \geq b$ y
- $a_1 == f(\text{List}(a_1, a_2, \ldots, a_{k+1}))$.
+Vamos a demostrar que $\forall r,\ \forall d : \texttt{paresCercanos}(r, d) == P(r, d)$.
+Lo hacemos en tres pasos.
 
-Por lo tanto, $P_f(L) == f(L)$.
+**Paso 1: `regiones` es $\text{regs}(r)$.** `regiones` se traduce a
+`r.map(s => s.region).distinct`. El `map` da la región de cada sismo en el orden
+del registro y `distinct` conserva la primera aparición de cada una, así que
+`regiones` $= [a_0, \ldots, a_{k-1}]$. Como no tiene repetidos, la única
+aparición de $a_i$ está en la posición $i$, y por lo tanto
+`regiones.indexOf(` $a_i$ `)` $= i$.
 
-Concluimos por inducción que:
+**Paso 2: `cercanas(a, b)` es verdadera si y solo si $C(a, b, r, d)$.** Su
+traducción es
 
 ```math
-\forall n \in \mathbb{N} \setminus \{0\} : P_f(\text{List}(a_1, a_2, \ldots, a_n)) == f(\text{List}(a_1, a_2, \ldots, a_n))
+\text{flatMap}\big(s_1 \mapsto \text{map}(s_2 \mapsto (s_1, s_2),\ \text{filter}(q_{s_1}, r)),\ r\big)
 ```
 
-## 2. Argumentar la corrección de programas iterativos
+con $q_{s_1}(s_2) \equiv s_1\text{.region} = a \land s_2\text{.region} = b \land |s_1\text{.magnitud} - s_2\text{.magnitud}| \leq d$.
+Por el Lema 2, `.nonEmpty` es verdadero si y solo si existe $s_1 \in r$ tal
+que $\text{map}(\ldots, \text{filter}(q_{s_1}, r))$ no es vacía, si y solo si existe
+$s_1 \in r$ tal que $\text{filter}(q_{s_1}, r)$ no es vacía, si y solo si existen
+$s_1, s_2 \in r$ con $q_{s_1}(s_2)$. Eso es exactamente $C(a, b, r, d)$.
 
-Para argumentar la corrección de programas iterativos, se debe formalizar cómo
-es la iteración. Esto implica definir:
-
-- Cómo se representa un estado de la iteración, $s$.
-- Cuál es el estado inicial, $s_0$.
-- Cuál es el estado final (o cómo se reconoce que un estado es final): $s_f$.
-- Qué condición (o predicado) cumple todo estado: $\text{Inv}(s)$ (invariante
-  de la iteración).
-- El mecanismo para pasar de un estado al siguiente: $\text{transformar}(s)$.
-  Si $s_i$ es el estado $i$, entonces $\text{transformar}(s_i) = s_{i+1}$.
-
-Un programa iterativo tiene la siguiente forma:
-
-```scala
-def Pf(a: A): B = { // Pf recibe a de tipo A, y devuelve f(a) de tipo B
-  def Pf_iter(s: Estado): B =
-    if (esFinal(s)) respuesta(s) else Pf_iter(transformar(s))
-  Pf_iter(s0)
-}
-```
-
-Demostración de corrección:
-
-- $\text{Inv}(s_0)$: el estado inicial cumple la condición invariante.
-- Si $(s_i \neq s_f \land \text{Inv}(s_i)) \rightarrow \text{Inv}(\text{transformar}(s_i))$:
-  el nuevo estado cumple la condición invariante si el estado anterior la
-  cumplía.
-- De lo anterior se concluye $\text{Inv}(s_f)$, es decir, el estado final
-  cumple la condición invariante. Luego,
-  $\text{Inv}(s_f) \rightarrow \text{respuesta}(s_f) == f(a)$.
-- Finalmente, demostrar que siempre se llega al estado final $s_f$. Esto
-  implica que
-  $P_f(a) == \text{iter}(s_0) == \text{respuesta}(s_f) == f(a)$.
-
-### Ejemplo: factorial iterativo
-
-Considere el siguiente programa iterativo en Scala para calcular la función
-factorial:
-
-```scala
-def Pf(n: Int): Int = { // Pf recibe n de tipo Int, y devuelve n! de tipo Int
-  def Pf_iter(i: Int, n: Int, ac: Int): Int =
-    if (i > n) ac else Pf_iter(i + 1, n, i * ac)
-  Pf_iter(1, n, 1)
-}
-```
-
-Este programa implementa el siguiente proceso iterativo:
-
-- Un estado $s = (i, n, ac)$.
-- El estado inicial es $s_0 = (1, n, 1)$.
-- $(i, n, ac)$ es final si $i > n$, o lo que es lo mismo, si $i = n + 1$.
-- La invariante de ciclo es
-  $\text{Inv}(i, n, ac) \equiv i \leq n + 1 \land ac = (i-1)!$.
-  La invariante de ciclo es una relación que SIEMPRE se cumple en el ciclo.
-- $\text{transformar}((i, n, ac)) = (i+1, n, i \ast ac)$.
-
-Ahora, demostramos los puntos mencionados:
-
-**1.** $\text{Inv}(s_0)$: el estado inicial cumple la condición invariante.
+**Paso 3: el `for` externo.** Se traduce a
 
 ```math
-s_0 = (1, n, 1) \implies 1 \leq n + 1 \land 1 = 0!
+\text{flatMap}\big(a \mapsto \text{map}(b \mapsto (a, b),\ \text{filter}(q'_a, \text{regiones})),\ \text{regiones}\big)
 ```
 
-**2.** La invariante se mantiene con la transformación de estados,
-$(s_i \neq s_f \land \text{Inv}(s_i)) \rightarrow \text{Inv}(\text{transformar}(s_i))$:
+con $q'_a(b) \equiv \text{indexOf}(a) < \text{indexOf}(b) \land \texttt{cercanas}(a, b)$.
+Por las ecuaciones de $\text{flatMap}$, el resultado es la concatenación, para
+$a = a_0, a_1, \ldots$ en ese orden, de los bloques
+$B_i = \text{map}(b \mapsto (a_i, b), \text{filter}(q'_{a_i}, \text{regiones}))$. Por los
+Pasos 1 y 2, $q'_{a_i}(a_j) \iff i < j \land C(a_i, a_j, r, d)$. Entonces $B_i$ contiene,
+en el orden de $j$, las parejas $(a_i, a_j)$ con $j > i$ y $C(a_i, a_j, r, d)$.
+Concatenar los bloques en orden creciente de $i$ da las parejas ordenadas por
+$i$ y luego por $j$, que es $P(r, d)$. $\blacksquare$
 
-1. Primer cambio, $i = i + 1$, lo que implica $ac = ((i+1) - 1)! = i!$.
-2. Segundo cambio, $ac = i \ast ac$, entonces $ac = (i - 1)! \ast i = i!$.
-3. Como se puede ver en ambos cambios indicados en la transformación, la
-   invariante se mantiene.
+Las propiedades que pide el enunciado salen de esta descripción:
 
-**3.** $\text{Inv}(s_f) \rightarrow \text{respuesta}(s_f) == f(a)$
+* **Nunca una región consigo misma:** solo hay parejas con $i < j$, así que
+  $a_i \neq a_j$.
+* **Cada pareja sale una sola vez, sin importar el orden:** las parejas
+  corresponden una a una a pares de posiciones $(i, j)$ con $i < j$, porque las
+  $a_i$ son distintas, y cada par de posiciones aparece una sola vez. La pareja
+  $(a_j, a_i)$ exigiría $j < i$, así que nunca aparece junto con $(a_i, a_j)$.
+* **Orden de aparición:** cada pareja se ordena por la posición de la primera
+  aparición de sus regiones en el registro.
+* **Registro vacío o una sola región:** $k = 0$ o $k = 1$ no tiene pares
+  $i < j$, y el resultado es $`[\,]`$.
+
+## Punto 2: agrupar con mapas
+
+Para una región $x$ y un registro $r$ se definen
 
 ```math
-(n + 1 \leq n + 1) \land ac = ((n+1)-1)! \rightarrow ac == n!
+S(x, r) = \text{filter}(s \mapsto s\text{.region} = x,\ r) \qquad R(r) = \{ s\text{.region} \mid s \in r \}
 ```
 
-**4.** En cada paso, la componente $i$ del estado incrementa, acercándose a $n+1$.
-Después de $n$ iteraciones, se alcanza $n+1$.
+es decir, los sismos de $x$ en el orden del registro, y las regiones que
+aparecen. Lo que describe el enunciado es:
 
-Esto implica que $P_f(n) == \text{iter}(1, n, 1) == n!$
+* `porRegion(r)` es el mapa de dominio $R(r)$ con $\texttt{porRegion}(r)(x) = S(x, r)$.
+* `conteoPorRegion(r)` es el mapa de dominio $R(r)$ con valor $|S(x, r)|$.
+* `magnitudMaxima(r)` es el mapa de dominio $R(r)$ con valor
+  $`\max \{ s\text{.magnitud} \mid s \in S(x, r) \}`$.
 
-### Ejemplo: el máximo de una lista
+En los tres, las regiones que no están en el registro no son llaves del mapa.
 
-Se desea calcular el máximo de una lista de enteros positivos, no vacía. Sea
-$f : \text{List}[\mathbb{N}] \to \mathbb{N}$ la función que calcula ese valor.
-Y sea $P_f$ el siguiente programa en Scala:
+### Teorema 4: `porRegion`
 
-```scala
-def maxIt(l: List[Int]): Int = {
-  def maxAux(max: Int, l: List[Int]): Int = {
-    if (l.isEmpty) max
-    else maxAux(math.max(max, l.head), l.tail)
-  }
-  maxAux(l.head, l.tail)
-}
-```
+El código es `r.groupBy(_.region)`. Por la especificación de `groupBy` con
+$g(s) = s\text{.region}$, el dominio es $`\{ s\text{.region} \mid s \in r \} = R(r)`$ y el
+valor de la llave $x$ es $\text{filter}(s \mapsto s\text{.region} = x, r) = S(x, r)$.
+Eso es lo que se pedía. Si $x \notin R(r)$, no es una llave, y para el registro
+vacío el dominio es vacío, es decir, el resultado es `Map()`. $\blacksquare$
 
-Este programa implementa el siguiente proceso iterativo:
+### Lema 3: las llaves tienen al menos un sismo
 
-- Un estado $s = (max, l)$ donde $l = \text{List}(a_i, a_{i+1}, \ldots, a_k)$
-  es una cola de $L$.
-- El estado inicial es
-  $s_0 = (L.\text{head}, L.\text{tail}) = (a_1, \text{List}(a_2, \ldots, a_k))$.
-- $s = (max, l)$ es final si $l$ es vacía.
-- $\text{Inv}(max, l) \equiv l = \text{List}(a_i, a_{i+1}, \ldots, a_k) \land max = f(\text{List}(a_1, a_2, \ldots, a_{i-1}))$.
-- $\text{transformar}((max, l)) = (nmax, l.\text{tail})$ donde $nmax = max$ si
-  $max \geq l.\text{head}$, y $nmax = l.\text{head}$ si no.
+Si $x \in R(r)$, entonces $`S(x, r) \neq [\,]`$.
 
-Demostración de los puntos:
+*Demostración.* Como $x \in R(r)$, existe $s \in r$ con $s\text{.region} = x$. Por el
+Lema 2, $\text{filter}(s \mapsto s\text{.region} = x, r)$ no es vacío. $\blacksquare$
 
-**1.** $\text{Inv}(s_0)$: el estado inicial cumple la condición invariante.
+### Teorema 5: `conteoPorRegion`
 
-```math
-s_0 = (a_1, \text{List}(a_2, \ldots, a_k)) \implies a_1 = f(\text{List}(a_1))
-```
+El código es `porRegion(r).map { case (region, sismos) => (region, sismos.length) }`.
+Por el Teorema 4, las entradas de `porRegion(r)` son $(x, S(x, r))$ con
+$x \in R(r)$. El `map` reemplaza cada una por $(x, |S(x, r)|)$. Como las llaves
+$x$ son distintas, ninguna entrada se pierde ni se mezcla con otra. El resultado
+tiene dominio $R(r)$ y valor $|S(x, r)|$. $\blacksquare$
 
-**2.** $(s_i \neq s_f \land \text{Inv}(s_i)) \rightarrow \text{Inv}(\text{transformar}(s_i))$
+### Teorema 6: `magnitudMaxima`
 
-```math
-\neg\, l.\text{isEmpty} \land l = \text{List}(a_i, a_{i+1}, \ldots, a_k) \land max = f(\text{List}(a_1, a_2, \ldots, a_{i-1}))
-```
+El código es
+`porRegion(r).map { case (region, sismos) => (region, sismos.map(_.magnitud).max) }`.
+Cada entrada $(x, S(x, r))$ pasa a $(x, \max(\text{map}(\text{magnitud}, S(x, r))))$. El `max`
+está bien definido porque, por el Lema 3, la lista $S(x, r)$ no es vacía para toda
+llave, así que no se lanza ninguna excepción. El valor es la mayor magnitud entre
+los sismos de $x$, con dominio $R(r)$. $\blacksquare$
 
-```math
-\rightarrow l.\text{tail} = \text{List}(a_{i+1}, \ldots, a_k) \land nmax = f(\text{List}(a_1, \ldots, a_i))
-```
+### Resultado independiente del orden de recorrido
 
-**3.** $\text{Inv}(s_f) \rightarrow \text{respuesta}(s_f) == f(a)$
+#### Lema 4: el conteo es una suma de términos independientes
 
-```math
-\text{Inv}((max, \text{List}())) \rightarrow max = f(\text{List}(a_1, \ldots, a_k))
-```
+$`|S(x, r)| = \sum_{s \in r} [\,s\text{.region} = x\,]`$, donde el corchete vale 1 si la
+condición se cumple y 0 si no.
 
-**4.** En cada paso, la lista $l$ se reduce, acercándose a ser vacía. Después de
-$k$ iteraciones, $l = \text{List}()$.
+*Demostración.* Por inducción sobre $r$. Para $`r = [\,]`$, $`S(x, [\,]) = [\,]`$ y su
+longitud es 0, como la suma vacía. Para $r = s :: r'$, por la ecuación del
+$\text{filter}$, $S(x, s :: r')$ es $s :: S(x, r')$ si $s\text{.region} = x$ y
+$S(x, r')$ si no. Entonces
+$`|S(x, s :: r')| = [\,s\text{.region} = x\,] + |S(x, r')|`$, que por la HI es el
+sumando de $s$ más la suma sobre $r'$. $\blacksquare$
 
-Esto implica que $P_f(L) == \text{maxAux}(L.\text{head}, L.\text{tail}) == f(L)$
+#### Teorema 7: reordenar el registro no cambia los agrupamientos
+
+Sea $r'$ un reordenamiento de $r$. Entonces:
+
+1. $R(r') = R(r)$.
+2. $\texttt{conteoPorRegion}(r') = \texttt{conteoPorRegion}(r)$.
+3. $\texttt{magnitudMaxima}(r') = \texttt{magnitudMaxima}(r)$.
+4. Para toda región $x$, la lista $\texttt{porRegion}(r')(x)$ es un reordenamiento de
+   $\texttt{porRegion}(r)(x)$.
+
+*Demostración.*
+
+* **(1)** $R$ solo depende de qué sismos hay, y no del orden.
+* **(4)** $S(x, r')$ contiene exactamente los sismos de $r'$ cuya región es $x$.
+  Como $r'$ tiene los mismos sismos que $r$ con las mismas repeticiones,
+  $S(x, r')$ tiene los mismos sismos que $S(x, r)$ con las mismas repeticiones.
+  El orden dentro de la lista sí puede cambiar, y por eso (4) dice
+  "reordenamiento" y no "igual".
+* **(2)** Por el Lema 4, $|S(x, r)|$ es una suma con un sumando por sismo, y cada
+  sumando depende solo de ese sismo, no de su posición. La suma de números enteros
+  es conmutativa y asociativa, así que vale lo mismo para $r$ y para $r'$. Con el
+  mismo dominio por (1), los dos mapas son iguales.
+* **(3)** La mayor magnitud $m$ de una lista no vacía es el único valor que cumple
+  (i) aparece en la lista y (ii) es mayor o igual que todos los elementos. Ambas
+  condiciones solo dependen de qué valores hay, no de su orden. Por (4), las listas
+  $S(x, r)$ y $S(x, r')$ tienen los mismos sismos, y por tanto las mismas
+  magnitudes, así que tienen el mismo máximo. Con el mismo dominio por (1), los
+  dos mapas son iguales. $\blacksquare$
+
+Por lo tanto, el conteo y la magnitud máxima no dependen del orden en que se
+recorre el registro. `porRegion` conserva los mismos sismos por región, pero el
+orden dentro de cada lista sigue al del registro: si el registro se invierte,
+cada lista queda invertida.
+
+#### Comprobación con pruebas
+
+Dos pruebas de `RegistroSismicoTestExtras` verifican este resultado sobre un
+registro concreto: `el conteo y la máxima no dependen del orden en que se recorre
+el registro` y `porRegion: con el registro invertido cada región tiene los mismos
+sismos`.
