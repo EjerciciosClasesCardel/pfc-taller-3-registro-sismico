@@ -7,9 +7,9 @@ vacío y el paso de inducción añade un sismo al frente.
 
 ## Convenciones
 
-* Un `Registro` es o bien la lista vacía $[\,]$, o bien $s :: r'$: un sismo $s$
+* Un `Registro` es o bien la lista vacía $`[\,]`$, o bien $s :: r'$: un sismo $s$
   al frente de un registro $r'$.
-* De un sismo $s$ se usan $s.\text{region}$ y $s.\text{magnitud}$.
+* De un sismo $s$ se usan $s\text{.region}$ y $s\text{.magnitud}$.
 * $|L|$ es la longitud de la lista $L$, $L_1 \mathbin{++} L_2$ es la
   concatenación y $x \in L$ significa que $x$ aparece en $L$.
 * Decimos que $r'$ es un **reordenamiento** de $r$ si tiene los mismos sismos,
@@ -35,7 +35,7 @@ Las operaciones de listas que usa el código cumplen estas ecuaciones:
   `filter` con la conjunción de las dos condiciones.
 * `distinct` conserva la primera aparición de cada elemento y el orden en que
   aparecen.
-* `r.groupBy(g)` es el mapa cuyo dominio es $\{ g(s) \mid s \in r \}$ y que a
+* `r.groupBy(g)` es el mapa cuyo dominio es $`\{ g(s) \mid s \in r \}`$ y que a
   cada llave $k$ le asigna
 
 ```math
@@ -57,7 +57,7 @@ L([\,]) = [\,] \qquad L(s :: r') = \begin{cases} g(s) :: L(r') & \text{si } p(s)
 ```
 
 *Demostración.* Para el registro vacío,
-$L([\,]) = \text{map}(g, \text{filter}(p, [\,])) = \text{map}(g, [\,]) = [\,]$.
+$`L([\,]) = \text{map}(g, \text{filter}(p, [\,])) = \text{map}(g, [\,]) = [\,]`$.
 Para $s :: r'$ hay dos casos. Si $p(s)$, entonces
 $\text{filter}(p, s :: r') = s :: \text{filter}(p, r')$, y
 $L(s :: r') = g(s) :: \text{map}(g, \text{filter}(p, r')) = g(s) :: L(r')$. Si no
@@ -70,22 +70,22 @@ Sea $F_1$ la función que el enunciado describe: las regiones de los sismos que
 superan el umbral, en orden y con repetidos.
 
 ```math
-F_1([\,], u) = [\,] \qquad F_1(s :: r', u) = \begin{cases} s.\text{region} :: F_1(r', u) & \text{si } s.\text{magnitud} > u \\ F_1(r', u) & \text{si no} \end{cases}
+F_1([\,], u) = [\,] \qquad F_1(s :: r', u) = \begin{cases} s\text{.region} :: F_1(r', u) & \text{si } s\text{.magnitud} > u \\ F_1(r', u) & \text{si no} \end{cases}
 ```
 
 Vamos a demostrar que $\forall u,\ \forall r \in \text{Registro} : \texttt{fuertes}(r, u) == F_1(r, u)$.
 
 La función se traduce a `r.withFilter(s => s.magnitud > umbral).map(s => s.region)`,
-es decir, $\text{map}(g, \text{filter}(p, r))$ con $p(s) \equiv s.\text{magnitud} > u$ y
-$g(s) = s.\text{region}$. Por inducción sobre $r$, con $u$ fijo:
+es decir, $\text{map}(g, \text{filter}(p, r))$ con $p(s) \equiv s\text{.magnitud} > u$ y
+$g(s) = s\text{.region}$. Por inducción sobre $r$, con $u$ fijo:
 
-**Caso base:** $r = [\,]$. Por el Lema 1, $\texttt{fuertes}([\,], u) = [\,] = F_1([\,], u)$.
+**Caso base:** $`r = [\,]`$. Por el Lema 1, $`\texttt{fuertes}([\,], u) = [\,] = F_1([\,], u)`$.
 
 **Caso de inducción:** $r = s :: r'$. La hipótesis de inducción (HI) es
-$\texttt{fuertes}(r', u) == F_1(r', u)$. Si $s.\text{magnitud} > u$, por el Lema 1:
+$\texttt{fuertes}(r', u) == F_1(r', u)$. Si $s\text{.magnitud} > u$, por el Lema 1:
 
 ```math
-\texttt{fuertes}(s :: r', u) = s.\text{region} :: \texttt{fuertes}(r', u) \overset{\text{HI}}{=} s.\text{region} :: F_1(r', u) = F_1(s :: r', u)
+\texttt{fuertes}(s :: r', u) = s\text{.region} :: \texttt{fuertes}(r', u) \overset{\text{HI}}{=} s\text{.region} :: F_1(r', u) = F_1(s :: r', u)
 ```
 
 Si no, por el Lema 1 y la HI,
@@ -104,17 +104,17 @@ comparar con los demás.
 Sea $F_2$ la función que describe el enunciado: las magnitudes de los sismos de la región $x$.
 
 ```math
-F_2([\,], x) = [\,] \qquad F_2(s :: r', x) = \begin{cases} s.\text{magnitud} :: F_2(r', x) & \text{si } s.\text{region} = x \\ F_2(r', x) & \text{si no} \end{cases}
+F_2([\,], x) = [\,] \qquad F_2(s :: r', x) = \begin{cases} s\text{.magnitud} :: F_2(r', x) & \text{si } s\text{.region} = x \\ F_2(r', x) & \text{si no} \end{cases}
 ```
 
 La función se traduce a `r.withFilter(s => s.region == region).map(s => s.magnitud)`,
-que es $\text{map}(g, \text{filter}(p, r))$ con $p(s) \equiv s.\text{region} = x$ y
-$g(s) = s.\text{magnitud}$. La demostración es la del Teorema 1 con esos $p$ y
-$g$: el caso base es el registro vacío, que da $[\,]$ por el Lema 1, y el paso
+que es $\text{map}(g, \text{filter}(p, r))$ con $p(s) \equiv s\text{.region} = x$ y
+$g(s) = s\text{.magnitud}$. La demostración es la del Teorema 1 con esos $p$ y
+$g$: el caso base es el registro vacío, que da $`[\,]`$ por el Lema 1, y el paso
 añade un sismo $s$ al frente, donde el Lema 1 y la HI dan
 $\texttt{enRegion}(s :: r', x) = F_2(s :: r', x)$ en cada uno de los dos casos.
 Por lo tanto $\forall r,\ \forall x : \texttt{enRegion}(r, x) == F_2(r, x)$. En particular,
-si la región no aparece, ningún sismo cumple $p$ y el resultado es $[\,]$. $\blacksquare$
+si la región no aparece, ningún sismo cumple $p$ y el resultado es $`[\,]`$. $\blacksquare$
 
 ### Lema 2: cuándo un `filter`, un `map` o un `flatMap` da una lista no vacía
 
@@ -128,11 +128,11 @@ Para toda lista $l$:
 y $\text{map}(f, l)$ es vacía si y solo si $l$ es vacía, porque $\text{map}$
 conserva la longitud.
 
-*Demostración.* Por inducción sobre $l$. Para $l = [\,]$, las tres listas son
+*Demostración.* Por inducción sobre $l$. Para $`l = [\,]`$, las tres listas son
 vacías y no existe ningún $x \in l$. Para $l = x :: xs$, el $\text{flatMap}$ vale
 $f(x) \mathbin{++} \text{flatMap}(f, xs)$, que es no vacío si y solo si $f(x)$ es
 no vacío o $\text{flatMap}(f, xs)$ es no vacío. Por la HI, esto ocurre si y solo
-si $f(x) \neq [\,]$ o existe $y \in xs$ con $f(y) \neq [\,]$, es decir, si y solo
+si $`f(x) \neq [\,]`$ o existe $y \in xs$ con $`f(y) \neq [\,]`$, es decir, si y solo
 si existe un elemento de $x :: xs$ con esa propiedad. El caso del
 $\text{filter}$ es igual, mirando sus dos ecuaciones. $\blacksquare$
 
@@ -142,7 +142,7 @@ Sea $\text{regs}(r) = [a_0, a_1, \ldots, a_{k-1}]$ la lista de las regiones de $
 sin repetir, en el orden de su primera aparición. Sea
 
 ```math
-C(a, b, r, d) \equiv \exists s_1, s_2 \in r : s_1.\text{region} = a \land s_2.\text{region} = b \land |s_1.\text{magnitud} - s_2.\text{magnitud}| \leq d
+C(a, b, r, d) \equiv \exists s_1, s_2 \in r : s_1\text{.region} = a \land s_2\text{.region} = b \land |s_1\text{.magnitud} - s_2\text{.magnitud}| \leq d
 ```
 
 la condición "algún sismo de $a$ y algún sismo de $b$ difieren a lo sumo $d$". La
@@ -171,7 +171,7 @@ traducción es
 \text{flatMap}\big(s_1 \mapsto \text{map}(s_2 \mapsto (s_1, s_2),\ \text{filter}(q_{s_1}, r)),\ r\big)
 ```
 
-con $q_{s_1}(s_2) \equiv s_1.\text{region} = a \land s_2.\text{region} = b \land |s_1.\text{magnitud} - s_2.\text{magnitud}| \leq d$.
+con $q_{s_1}(s_2) \equiv s_1\text{.region} = a \land s_2\text{.region} = b \land |s_1\text{.magnitud} - s_2\text{.magnitud}| \leq d$.
 Por el Lema 2, `.nonEmpty` es verdadero si y solo si existe $s_1 \in r$ tal
 que $\text{map}(\ldots, \text{filter}(q_{s_1}, r))$ no es vacía, si y solo si existe
 $s_1 \in r$ tal que $\text{filter}(q_{s_1}, r)$ no es vacía, si y solo si existen
@@ -203,14 +203,14 @@ Las propiedades que pide el enunciado salen de esta descripción:
 * **Orden de aparición:** cada pareja se ordena por la posición de la primera
   aparición de sus regiones en el registro.
 * **Registro vacío o una sola región:** $k = 0$ o $k = 1$ no tiene pares
-  $i < j$, y el resultado es $[\,]$.
+  $i < j$, y el resultado es $`[\,]`$.
 
 ## Punto 2: agrupar con mapas
 
 Para una región $x$ y un registro $r$ se definen
 
 ```math
-S(x, r) = \text{filter}(s \mapsto s.\text{region} = x,\ r) \qquad R(r) = \{ s.\text{region} \mid s \in r \}
+S(x, r) = \text{filter}(s \mapsto s\text{.region} = x,\ r) \qquad R(r) = \{ s\text{.region} \mid s \in r \}
 ```
 
 es decir, los sismos de $x$ en el orden del registro, y las regiones que
@@ -219,24 +219,24 @@ aparecen. Lo que describe el enunciado es:
 * `porRegion(r)` es el mapa de dominio $R(r)$ con $\texttt{porRegion}(r)(x) = S(x, r)$.
 * `conteoPorRegion(r)` es el mapa de dominio $R(r)$ con valor $|S(x, r)|$.
 * `magnitudMaxima(r)` es el mapa de dominio $R(r)$ con valor
-  $\max \{ s.\text{magnitud} \mid s \in S(x, r) \}$.
+  $`\max \{ s\text{.magnitud} \mid s \in S(x, r) \}`$.
 
 En los tres, las regiones que no están en el registro no son llaves del mapa.
 
 ### Teorema 4: `porRegion`
 
 El código es `r.groupBy(_.region)`. Por la especificación de `groupBy` con
-$g(s) = s.\text{region}$, el dominio es $\{ s.\text{region} \mid s \in r \} = R(r)$ y el
-valor de la llave $x$ es $\text{filter}(s \mapsto s.\text{region} = x, r) = S(x, r)$.
+$g(s) = s\text{.region}$, el dominio es $`\{ s\text{.region} \mid s \in r \} = R(r)`$ y el
+valor de la llave $x$ es $\text{filter}(s \mapsto s\text{.region} = x, r) = S(x, r)$.
 Eso es lo que se pedía. Si $x \notin R(r)$, no es una llave, y para el registro
 vacío el dominio es vacío, es decir, el resultado es `Map()`. $\blacksquare$
 
 ### Lema 3: las llaves tienen al menos un sismo
 
-Si $x \in R(r)$, entonces $S(x, r) \neq [\,]$.
+Si $x \in R(r)$, entonces $`S(x, r) \neq [\,]`$.
 
-*Demostración.* Como $x \in R(r)$, existe $s \in r$ con $s.\text{region} = x$. Por el
-Lema 2, $\text{filter}(s \mapsto s.\text{region} = x, r)$ no es vacío. $\blacksquare$
+*Demostración.* Como $x \in R(r)$, existe $s \in r$ con $s\text{.region} = x$. Por el
+Lema 2, $\text{filter}(s \mapsto s\text{.region} = x, r)$ no es vacío. $\blacksquare$
 
 ### Teorema 5: `conteoPorRegion`
 
@@ -259,14 +259,14 @@ los sismos de $x$, con dominio $R(r)$. $\blacksquare$
 
 #### Lema 4: el conteo es una suma de términos independientes
 
-$|S(x, r)| = \sum_{s \in r} [\,s.\text{region} = x\,]$, donde el corchete vale 1 si la
+$`|S(x, r)| = \sum_{s \in r} [\,s\text{.region} = x\,]`$, donde el corchete vale 1 si la
 condición se cumple y 0 si no.
 
-*Demostración.* Por inducción sobre $r$. Para $r = [\,]$, $S(x, [\,]) = [\,]$ y su
+*Demostración.* Por inducción sobre $r$. Para $`r = [\,]`$, $`S(x, [\,]) = [\,]`$ y su
 longitud es 0, como la suma vacía. Para $r = s :: r'$, por la ecuación del
-$\text{filter}$, $S(x, s :: r')$ es $s :: S(x, r')$ si $s.\text{region} = x$ y
+$\text{filter}$, $S(x, s :: r')$ es $s :: S(x, r')$ si $s\text{.region} = x$ y
 $S(x, r')$ si no. Entonces
-$|S(x, s :: r')| = [\,s.\text{region} = x\,] + |S(x, r')|$, que por la HI es el
+$`|S(x, s :: r')| = [\,s\text{.region} = x\,] + |S(x, r')|`$, que por la HI es el
 sumando de $s$ más la suma sobre $r'$. $\blacksquare$
 
 #### Teorema 7: reordenar el registro no cambia los agrupamientos
