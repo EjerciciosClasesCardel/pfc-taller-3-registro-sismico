@@ -277,3 +277,95 @@ s_0 = (a_1, \text{List}(a_2, \ldots, a_k)) \implies a_1 = f(\text{List}(a_1))
 $k$ iteraciones, $l = \text{List}()$.
 
 Esto implica que $P_f(L) == \text{maxAux}(L.\text{head}, L.\text{tail}) == f(L)$
+
+
+## Punto 3: consultas seguras
+
+Sea $r$ un registro (una lista de sismos). Para una región $g$ se define el
+conjunto de sus sismos $r_g = \{\, s \in r \mid s.\text{region} = g \,\}$.
+
+### `conteoSeguro`
+
+**Especificación.** Para toda región $g$ (esté o no en $r$):
+
+```math
+\text{conteoSeguro}(r)(g) = |r_g|
+```
+
+**Argumento.** Hay dos casos.
+
+- Si $g$ aparece en $r$, `groupBy` crea la clave $g$ con la lista de todos los
+  sismos de región $g$, es decir $r_g$. El `map` reemplaza esa lista por su
+  longitud, así que la clave $g$ responde $|r_g|$.
+- Si $g$ no aparece en $r$, la clave no existe en el mapa. `withDefaultValue(0)`
+  hace que `apply` responda $0$, y $|r_g| = 0$ porque $r_g = \emptyset$.
+
+Ambos casos cumplen la especificación, y ninguno lanza excepción. El caso base
+del registro vacío queda cubierto por el segundo caso para toda región.
+
+**Independencia del orden.** El grupo $r_g$ y su tamaño solo dependen de qué
+sismos hay en $r$ y no de la posición en que aparecen. Si $r'$ es una
+permutación de $r$, entonces $|r'_g| = |r_g|$ para toda $g$, y el mapa
+resultante es el mismo.
+
+### `maximaDe`
+
+**Especificación.**
+
+```math
+\text{maximaDe}(r, g) =
+\begin{cases}
+\text{None} & \text{si } r_g = \emptyset \\
+\text{Some}\big(\max \{\, s.\text{magnitud} \mid s \in r_g \,\}\big) & \text{si } r_g \neq \emptyset
+\end{cases}
+```
+
+**Corrección del `for` por inducción sobre la lista.** Sea
+$M(r, g)$ la lista que produce `for (s <- r if s.region == g) yield s.magnitud`.
+Se demuestra que $M(r, g)$ contiene exactamente las magnitudes de los sismos de
+$r_g$, en el orden en que aparecen.
+
+**Caso base:** $r = \text{Nil}$. El `for` no tiene elementos que recorrer y da
+$\text{Nil}$, que es la lista de magnitudes de $r_g = \emptyset$.
+
+**Caso de inducción:** $r = s :: t$, con la hipótesis de inducción sobre $t$:
+$M(t, g)$ es la lista de magnitudes de $t_g$.
+
+- Si $s.\text{region} = g$, el guarda se cumple y
+  $M(s :: t, g) = s.\text{magnitud} :: M(t, g)$, que son las magnitudes de
+  $(s :: t)_g$.
+- Si $s.\text{region} \neq g$, el guarda falla y $M(s :: t, g) = M(t, g)$, que
+  son las magnitudes de $(s :: t)_g = t_g$.
+
+Por inducción estructural, la propiedad vale para todo registro.
+
+**Cierre.** `maxOption` sobre una lista vacía devuelve `None` y sobre una lista
+no vacía devuelve `Some` del mayor elemento. Como $M(r, g)$ es vacía
+exactamente cuando $r_g = \emptyset$, el resultado coincide con la
+especificación en ambos casos.
+
+### `regionMasActiva`
+
+**Especificación.** Si $r = \emptyset$ el resultado es `None`. Si no, es
+`Some(g)` donde $g$ es la región con $|r_g|$ máximo y, entre las que empatan,
+la menor en orden alfabético.
+
+**Argumento.** Sea $G$ el conjunto de regiones de $r$, que son las claves de
+`groupBy`; cada región aparece una sola vez en la lista de parejas
+$(g, |r_g|)$. La función ordena con la clave $k(g) = (-|r_g|,\ g)$, comparada
+lexicográficamente.
+
+- Si $r = \emptyset$, $G = \emptyset$, la lista de parejas es vacía y
+  `headOption` da `None`.
+- Si $r \neq \emptyset$, $G$ es no vacío. Como las regiones son distintas, las
+  claves $k(g)$ son todas distintas y el orden lexicográfico es total
+  estricto sobre ellas. `sortBy` deja primero la pareja de clave mínima.
+- Esa clave mínima $k(g^\ast)$ cumple, por la primera componente, que
+  $-|r_{g^\ast}| \leq -|r_g|$ para toda $g$, es decir $|r_{g^\ast}| \geq |r_g|$:
+  $g^\ast$ tiene el conteo máximo. Si otra región $g$ tiene el mismo conteo,
+  la primera componente empata y decide la segunda: $g^\ast \leq g$
+  alfabéticamente.
+
+Entonces $g^\ast$ es la región más activa con la regla de desempate pedida.
+Como el resultado no depende del orden de las parejas que entrega el mapa,
+sino solo de la clave $k$, tampoco depende del orden de $r$.
