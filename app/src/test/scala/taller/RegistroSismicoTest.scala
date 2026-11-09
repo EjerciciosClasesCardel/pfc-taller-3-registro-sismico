@@ -128,6 +128,46 @@ class RegistroSismicoTest extends AnyFunSuite {
     assert(regionMasActiva(empate) == Some("Arauca"))
   }
 
+  // Punto 3 Propio ------------------------------------------------------------
+
+  test("P3-1 conteoSeguro: dos consultas a regiones desconocidas dan cero") {
+    val m = conteoSeguro(registro)
+    assert(m("Amazonas") == 0)
+    assert(m("Atlántico") == 0)
+  }
+
+  test("P3-2 conteoSeguro: no altera los conteos de las regiones conocidas") {
+    val m = conteoSeguro(registro)
+    assert(m("Valle") == 3)
+    assert(m("Santander") == 2)
+    assert(m("Choco") == 2)
+  }
+
+  test("P3-3 maximaDe: región con un único sismo devuelve Some de su magnitud") {
+    val uno = List(Sismo(Fecha(2025, 2), "Cauca", 4.7, 15))
+    assert(maximaDe(uno, "Cauca") == Some(4.7))
+  }
+
+  test("P3-4 maximaDe: distingue mayúsculas/minúsculas") {
+    assert(maximaDe(registro, "choco") == None)
+    assert(maximaDe(registro, "Choco") == Some(6.0))
+  }
+
+  test("P3-5 regionMasActiva: empate entre dos regiones gana la alfabéticamente menor") {
+    val empate = List(
+      Sismo(Fecha(2025, 1), "Tolima", 4.0, 10),
+      Sismo(Fecha(2025, 1), "Boyacá", 4.5, 10))
+    assert(regionMasActiva(empate) == Some("Boyacá"))
+  }
+
+  test("P3-6 regionMasActiva: empate entre tres regiones gana la primera alfabética") {
+    val empate3 = List(
+      Sismo(Fecha(2025, 1), "Zulia", 4.0, 10),
+      Sismo(Fecha(2025, 1), "Arauca", 4.0, 10),
+      Sismo(Fecha(2025, 1), "Meta", 4.0, 10))
+    assert(regionMasActiva(empate3) == Some("Arauca"))
+  }
+
   // Punto 4 -------------------------------------------------------------------
 
   test("replicas: las primeras cuatro de un sismo de 5.0") {
@@ -156,6 +196,36 @@ class RegistroSismicoTest extends AnyFunSuite {
 
   test("replicasSensibles: el mínimo es estricto") {
     assert(replicasSensibles(3.0, 3.0) == List())
+  }
+  // Punto 4 Propio ------------------------------------------------------------
+
+  test("P4-1 replicas: desde 1.0 los primeros cuatro términos") {
+    assert(replicas(1.0).take(4).toList == List(1.0, 0.8, 0.64, 0.51))
+  }
+
+  test("P4-2 replicas: desde 0.0 se queda en 0.0") {
+    assert(replicas(0.0).take(5).toList == List(0.0, 0.0, 0.0, 0.0, 0.0))
+  }
+
+  test("P4-3 replicas: take(1000) no se cuelga (perezosa)") {
+    assert(replicas(7.3).take(1000).toList.length == 1000)
+  }
+
+  test("P4-4 replicasSensibles: con mínimo 0.0 se acota con take para no colgarse") {
+    val primeras = replicasSensibles(5.0, 0.0).take(5)
+    assert(primeras == List(5.0, 4.0, 3.2, 2.56, 2.05))
+  }
+
+  test("P4-5 replicasSensibles: mínimo exactamente igual al segundo término corta ahí") {
+    assert(replicasSensibles(5.0, 4.0) == List(5.0))
+  }
+
+  test("P4-6 replicasSensibles: mínimo mayor que la primera magnitud no devuelve nada") {
+    assert(replicasSensibles(5.0, 6.0) == List())
+  }
+
+  test("P4-7 replicasSensibles: desde 1.0 con mínimo 0.5 corta en 0.51") {
+    assert(replicasSensibles(1.0, 0.5) == List(1.0, 0.8, 0.64, 0.51))
   }
 
   // Punto 5 -------------------------------------------------------------------
