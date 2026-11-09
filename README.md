@@ -14,12 +14,12 @@ Llene esta tabla con el nombre completo y el código de cada integrante. Es
 parte de la entrega: si falta alguno, la entrega se sanciona con el 20 % de
 la nota.
 
-| Nombre completo | Código |
-|---|---|
-| | |
-| | |
-| | |
-| | |
+| Nombre completo           | Código  |
+|---------------------------|---------|
+| Sebastian Castro Cárdenas| 2559772 |
+|                           |         |
+|                           |         |
+|                           |         |
 
 ## Cómo está organizado el proyecto
 
