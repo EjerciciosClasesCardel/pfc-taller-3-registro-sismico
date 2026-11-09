@@ -300,3 +300,189 @@ flowchart LR
     S --> X
     C --> X
 ```
+
+## Punto 3 — consultas seguras
+
+Este punto consulta los mapas construidos en el Punto 2 sin riesgo de lanzar
+`NoSuchElementException` ante claves ausentes.
+
+### 3.1 `conteoSeguro`
+
+```scala
+def conteoSeguro(r: Registro): Map[String, Int] =
+  conteoPorRegion(r).withDefaultValue(0)
+```
+
+**Cómo se ejecuta.** `withDefaultValue` envuelve el mapa con un valor por
+defecto: al aplicarlo como función a una llave ausente (`map(key)`), en lugar de
+lanzar la excepción devuelve el valor de respaldo `0`. El mapa resultante se
+comporta como una **función total**:
+
+$$
+\text{conteoSeguro}(r)(reg) =
+\begin{cases}
+\text{conteoPorRegion}(r)(reg) & \text{si } reg \in \text{llaves del mapa} \\
+0 & \text{en otro caso}
+\end{cases}
+$$
+
+**Traza:**
+- `conteoSeguro(registro)("Amazonas")`: `"Amazonas"` no está en las llaves `{"Valle", "Santander", "Choco"}`; devuelve `0`.
+- `conteoSeguro(registro)("Valle")`: `"Valle"` sí está; devuelve su conteo `3`.
+- `conteoSeguro(List())("Valle")`: Sobre el registro vacío, no hay llaves; devuelve `0`.
+
+### 3.2 `maximaDe`
+
+```scala
+def maximaDe(r: Registro, region: String): Option[Double] =
+  magnitudMaxima(r).get(region)
+```
+
+**Cómo se ejecuta.** En el Punto 2 ya se calculó `magnitudMaxima(r)` como un
+`Map[String, Double]`. Para realizar la consulta segura de dicho mapa, se invoca
+el método `.get(region)`, el cual devuelve `Some(maxima)` si la llave está
+presente en el mapa y `None` si está ausente o si el registro era vacío. No se
+produce ninguna excepción.
+
+**Traza:**
+- `maximaDe(registro, "Choco")`: `"Choco"` tiene sismos; devuelve `Some(6.0)`.
+- `maximaDe(registro, "Amazonas")`: `"Amazonas"` no existe en el registro; devuelve `None`.
+- `maximaDe(List(), "Valle")`: El registro vacío genera un mapa vacío; devuelve `None`.
+
+### 3.3 `regionMasActiva`
+
+```scala
+def regionMasActiva(r: Registro): Option[String] =
+  conteoPorRegion(r).toList
+    .sortBy { case (region, n) => (-n, region) }
+    .headOption
+    .map(_._1)
+```
+
+**Cómo se ejecuta.** Paso a paso:
+
+1. `conteoPorRegion(r).toList` convierte el mapa en la lista de parejas
+   `(región, conteo)`. Para el registro de ejemplo:
+   `List(("Valle", 3), ("Santander", 2), ("Choco", 2))`.
+2. `sortBy { case (region, n) => (-n, region) }` ordena lexicográficamente por
+   la tupla: primero por conteo **descendente** (el signo menos invierte el orden
+   numérico natural) y, ante empates en el conteo, por la cadena de la `region` en
+   orden **ascendente** (el desempate alfabético estipulado en el enunciado):
+   `List(("Valle", 3), ("Choco", 2), ("Santander", 2))`.
+3. `headOption` toma el primer elemento de la lista ordenada y devuelve `None` si
+   la lista está vacía (registro vacío):
+   `Some(("Valle", 3))` para el ejemplo, `None` para el registro vacío.
+4. `map(_._1)` extrae el nombre de la región: `Some("Valle")`.
+
+**Traza del desempate alfabético:**
+Con `List(Sismo(..., "Zulia", ...), Sismo(..., "Arauca", ...))`:
+- El conteo es `Map("Zulia" -> 1, "Arauca" -> 1)`.
+- `sortBy` evalúa las tuplas `(-1, "Arauca")` y `(-1, "Zulia")`. Como `-1 == -1`,
+  desempata alfabéticamente: `"Arauca" < "Zulia"`.
+- `headOption.map(_._1)` produce `Some("Arauca")`: la primera en orden alfabético,
+  independiente del orden en que aparecieron en el registro.
+
+```mermaid
+flowchart LR
+    R["conteoPorRegion(r)"] --> L["toList: [(Valle,3), (Santander,2), (Choco,2)]"]
+    L --> S["sortBy (-n, region): [(Valle,3), (Choco,2), (Santander,2)]"]
+    S --> H["headOption: Some((Valle, 3))"]
+    H --> M["map(_._1): Some('Valle')"]
+```
+
+## Punto 4 — réplicas perezosas
+
+### 4.1 `replicas`: una secuencia infinita
+
+```scala
+def replicas(magnitud: Double): LazyList[Double] = {
+  val m = redondear(magnitud)
+  m #:: replicas(m * 0.8)
+}
+```
+
+**Cómo se ejecuta.** El operador `#::` construye una `LazyList` cuya
+**cabeza es el valor evaluado `m`** y cuya **cola es una expresión por nombre**:
+`replicas(m * 0.8)` no se evalúa al invocar la función, sino únicamente cuando un
+consumidor solicita la cola de la lista. Cada elemento sucesivo se define como:
+
+$$
+m_1 = \text{redondear}(\mu), \qquad m_{k+1} = \text{redondear}(0.8 \cdot m_k)
+$$
+
+**Por qué no agota la memoria aunque sea infinita.**
+La función no ejecuta un ciclo infinito ni reserva memoria para toda la
+secuencia; retorna de inmediato en tiempo $O(1)$ una celda que contiene el primer
+valor y una clausura (receta de cómputo) para la cola. Solo se materializan y
+almacenan en memoria los nodos que han sido explícitamente consultados (por
+ejemplo mediante `take(n)`), los cuales quedan memorizados (*memoized*) para no
+recalcularlos. La llamada `replicas(5.0).take(4)` retorna inmediatamente cuatro
+elementos sin bloquearse jamás.
+
+**Traza de `replicas(5.0).take(4).toList`:**
+
+| paso | consumidor solicita | cabeza evaluada | cola suspendida (receta) |
+|:---:|---|:---:|---|
+| 0 | `replicas(5.0)` | $5.0$ | `replicas(4.0)` |
+| 1 | cola de paso 0 | $4.0$ | `replicas(3.2)` |
+| 2 | cola de paso 1 | $3.2$ | `replicas(2.56)` |
+| 3 | cola de paso 2 | $2.56$ | `replicas(2.05)` |
+| — | `take(4)` completó 4 elementos | se detiene | nunca se evalúa `replicas(2.05)` |
+
+Resultado: `List(5.0, 4.0, 3.2, 2.56)`. En memoria únicamente se construyeron
+cuatro celdas; la cola del paso 3 quedó suspendida sin evaluar.
+
+```mermaid
+sequenceDiagram
+    participant T as take(4)
+    participant L0 as replicas(5.0)
+    participant L1 as replicas(4.0)
+    participant L2 as replicas(3.2)
+    participant L3 as replicas(2.56)
+    T->>L0: pide la cabeza
+    L0-->>T: 5.0 (calcula redondear(5.0))
+    T->>L0: pide la cola
+    L0->>L1: evalúa la receta
+    L1-->>T: 4.0
+    T->>L1: pide la cola
+    L1->>L2: evalúa la receta
+    L2-->>T: 3.2
+    T->>L2: pide la cola
+    L2->>L3: evalúa la receta
+    L3-->>T: 2.56
+    T-->>T: ya tiene 4: se detiene sin pedir la cola de L3
+```
+
+### 4.2 `replicasSensibles`: truncamiento bajo demanda
+
+```scala
+def replicasSensibles(magnitud: Double, minimo: Double): List[Double] =
+  replicas(magnitud).takeWhile(_ > minimo).toList
+```
+
+**Cómo se ejecuta.** El método `takeWhile` sobre una `LazyList` opera de forma
+perezosa: evalúa los elementos de uno en uno y se detiene en el **primer**
+elemento que no cumpla la condición estricta `_ > minimo`. En cuanto halla un
+elemento menor o igual al mínimo, no pide más elementos de la cola infinita.
+Finalmente, `toList` convierte únicamente los elementos aceptados en una lista
+ansiosa.
+
+**Traza de `replicasSensibles(5.0, 3.0)`:**
+
+| elemento | cálculo | valor | ¿supera 3.0? | decisión de `takeWhile` |
+|:---:|:---:|:---:|:---:|---|
+| 1 | $\text{redondear}(5.0)$ | $5.0$ | sí ($5.0 > 3.0$) | se acepta y se pide siguiente |
+| 2 | $\text{redondear}(5.0 \times 0.8)$ | $4.0$ | sí ($4.0 > 3.0$) | se acepta y se pide siguiente |
+| 3 | $\text{redondear}(4.0 \times 0.8)$ | $3.2$ | sí ($3.2 > 3.0$) | se acepta y se pide siguiente |
+| 4 | $\text{redondear}(3.2 \times 0.8)$ | $2.56$ | no ($2.56 \not> 3.0$) | **`takeWhile` se detiene** |
+
+Resultado: `List(5.0, 4.0, 3.2)`.
+El cuarto elemento ($2.56$) se tuvo que evaluar para verificar el predicado, pero
+al no cumplirlo, la evaluación se corta inmediatamente y ningún elemento
+posterior (como $2.05$) llega a ser computado.
+
+**Garantía de terminación.**
+Dado que $m_{k+1} \le 0.8\,m_k + 0.005 < m_k$ siempre que $m_k > 0.025$, la
+sucesión decrece estrictamente de manera geométrica. Para cualquier umbral
+mínimo convencional ($c \ge 0.02$), la sucesión cruza la cota en a lo sumo
+$O(\log_{0.8}(c / \mu))$ pasos, garantizando que `takeWhile` siempre termina.
