@@ -32,7 +32,8 @@ class RegistroSismico {
   // Punto 3: consultas seguras --------------------------------------------------
 
   /** Un mapa que responde cero por las regiones que no están en el registro. */
-  def conteoSeguro(r: Registro): Map[String, Int] = ???
+  def conteoSeguro(r: Registro): Map[String, Int] =
+    conteoPorRegion(r).withDefaultValue(0)
 
   /** La magnitud máxima de una región, o vacío si no hay registros suyos. */
   def maximaDe(r: Registro, region: String): Option[Double] = ???
