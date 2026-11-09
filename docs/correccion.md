@@ -309,3 +309,186 @@ Dos pruebas de `RegistroSismicoTestExtras` verifican este resultado sobre un
 registro concreto: `el conteo y la máxima no dependen del orden en que se recorre
 el registro` y `porRegion: con el registro invertido cada región tiene los mismos
 sismos`.
+
+
+## Punto 3 — consultas seguras
+
+### 3.1 `conteoSeguro`
+
+**Especificación.** Versión total de la función de conteo $C$:
+
+$$
+CS(r)(reg) =
+\begin{cases}
+C(r)(reg) & \text{si } reg \in \text{dom}(C(r)) \\
+0 & \text{en otro caso}
+\end{cases}
+$$
+
+**Teorema.** $\text{conteoSeguro}(r) = CS(r)$, y en particular la
+aplicación a cualquier región jamás lanza excepción.
+
+**Demostración.** `conteoSeguro(r)` se implementa como `conteoPorRegion(r).withDefaultValue(0)`.
+Por el Teorema 5, el mapa subyacente es $C(r)$. Por especificación del método
+`withDefaultValue`, ante una clave $k \in \text{dom}(C(r))$ se retorna $C(r)(k)$, y ante
+cualquier clave $k \notin \text{dom}(C(r))$ se devuelve el valor por defecto $0$,
+sin lanzar `NoSuchElementException`. Esto coincide exactamente con la definición por
+casos de $CS(r)$. Si $r = [\,]$, el dominio es vacío y cualquier consulta devuelve $0$. $\blacksquare$
+
+### 3.2 `maximaDe`
+
+**Especificación.**
+
+$$
+MD(r, reg) =
+\begin{cases}
+\text{Some}(M(r)(reg)) & \text{si } reg \in R(r) \\
+\text{None} & \text{en otro caso}
+\end{cases}
+$$
+
+donde $M(r) = \texttt{magnitudMaxima}(r)$.
+
+**Teorema.** $\text{maximaDe}(r, reg) = MD(r, reg)$.
+
+**Demostración.** La función se define como `magnitudMaxima(r).get(region)`.
+Por el Teorema 6, `magnitudMaxima(r)` tiene dominio $R(r)$ y asocia a cada región
+su máxima magnitud observada. El método `.get(k)` de `Map` retorna `Some(v)` si
+$k \in \text{dom}$ y `None` si $k \notin \text{dom}$. Por lo tanto, devuelve
+`Some(M(r)(reg))` cuando $reg \in R(r)$ y `None` cuando no se registran sismos de
+dicha región o cuando el registro es vacío. No existe caso que invoque evaluación
+insegura ni lance excepción. $\blacksquare$
+
+### 3.3 `regionMasActiva`
+
+**Especificación.**
+
+$$
+RA(r) =
+\begin{cases}
+\text{Some}\bigl(\max\nolimits_{\preceq} \text{dom}(C(r))\bigr) & \text{si } r \neq [\,] \\
+\text{None} & \text{si } r = [\,]
+\end{cases}
+$$
+
+donde $\preceq$ es el orden total lexicográfico que compara primero por conteo
+descendente y desempata por orden alfabético ascendente:
+
+$$
+a \preceq b \iff C(r)(a) > C(r)(b) \;\lor\; \bigl(C(r)(a) = C(r)(b) \land a \le_{\text{alf}} b\bigr)
+$$
+
+**Teorema.** $\text{regionMasActiva}(r) = RA(r)$.
+
+**Demostración.** La función convierte el mapa de conteo en lista de tuplas con
+`toList`, la ordena mediante `sortBy { case (region, n) => (-n, region) }` y
+extrae la cabeza con `headOption.map(_._1)`. La tupla de ordenamiento $(-n, region)$
+satisface:
+1. Al comparar enteros, $-n_1 < -n_2 \iff n_1 > n_2$, lo que ordena en forma
+   descendente según el número de sismos.
+2. Ante igualdad en el conteo ($n_1 = n_2$), se desempata por la relación de orden
+   alfabético estándar sobre las cadenas de texto (`region`).
+
+Como la relación $\preceq$ inducida por esta tupla es un orden total estricto y el
+ordenamiento es estable, el primer elemento es único y corresponde a
+$\max_{\preceq} \text{dom}(C(r))$. Si $r = [\,]$, la lista de tuplas es vacía y
+`headOption` retorna `None`. $\blacksquare$
+
+**Independencia del orden de recorrido.**
+El resultado de $\text{regionMasActiva}(r)$ no depende del orden en que aparezcan
+los sismos en $r$:
+
+$$
+\forall \pi.\; RA(\pi(r)) = RA(r)
+$$
+
+Esto se debe a que $C(\pi(r)) = C(r)$ (Teorema 7) y el criterio de selección y
+desempate $\preceq$ opera exclusivamente sobre el par $(\text{conteo}, \text{nombre de región})$,
+sin utilizar la posición ni el índice original de los sismos en el registro. $\blacksquare$
+
+## Punto 4 — réplicas perezosas
+
+### 4.1 `replicas`
+
+**Especificación.** La secuencia infinita $(m_k)_{k \ge 1}$ definida por:
+
+$$
+m_1 = \rho(\mu), \qquad m_{k+1} = \rho(0.8 \cdot m_k),
+\qquad \rho(x) = \frac{\text{round}(100\,x)}{100}
+$$
+
+donde $\mu$ es la magnitud inicial dada y $\text{round}$ es el redondeo al entero
+más cercano.
+
+**Teorema.** Para todo $n \ge 1$ y toda magnitud $\mu$:
+
+$$
+\text{replicas}(\mu).\text{take}(n).\text{toList} = [m_1, m_2, \ldots, m_n]
+$$
+
+**Demostración (por inducción sobre $n$).**
+
+* **Caso base ($n = 1$):** `replicas(μ)` evalúa la cabeza como $m_1 = \rho(\mu)$ y
+  construye `m #:: replicas(m * 0.8)`. Al aplicar `take(1)`, se retorna
+  únicamente $[m_1]$ sin evaluar la cola. $\checkmark$
+* **Paso inductivo ($n \to n+1$):**
+  La definición perezosa con `#::` tiene cabeza $m_1$ y cola por nombre
+  `replicas(m_1 * 0.8)`. Por definición, la magnitud inicial de la cola es
+  $\mu' = 0.8 \cdot m_1$, cuya primera cabeza evaluada será
+  $m_2 = \rho(\mu') = \rho(0.8 \cdot m_1)$. Aplicando la hipótesis de inducción
+  sobre la cola para $n$ elementos:
+
+$$
+\text{cola}.\text{take}(n) = [m_2, m_3, \ldots, m_{n+1}]
+$$
+
+Por la propiedad de `take` en secuencias con cons perezoso:
+
+$$
+\text{replicas}(\mu).\text{take}(n+1) = m_1 :: (\text{cola}.\text{take}(n)) = [m_1, m_2, \ldots, m_{n+1}] \quad \checkmark
+$$
+
+$\blacksquare$
+
+**Por qué no agota la memoria.**
+El constructor `#::` recibe el segundo argumento por nombre (`=> LazyList[A]`).
+Por lo tanto, la llamada recursiva `replicas(m * 0.8)` queda encapsulada como una
+suspensión computacional. Al solicitar `take(n)`, el runtime de Scala solo
+materializa $n$ celdas en memoria, memorizando cada nodo ya calculado. La memoria
+empleada es estrictamente proporcional a los $n$ elementos demandados ($O(n)$) y
+nunca al tamaño infinito de la secuencia conceptual.
+
+### 4.2 `replicasSensibles`
+
+**Especificación.** $RS(\mu, c)$ es la lista de réplicas que superan
+estrictamente el umbral mínimo $c$, incluyendo la primera magnitud cuando esta lo supera:
+
+$$
+RS(\mu, c) = [m_1, \ldots, m_k], \quad k = \max \{ j \ge 0 \mid \forall i \in \{1, \ldots, j\}, m_i > c \}
+$$
+
+**Teorema.** $\text{replicasSensibles}(\mu, c) = RS(\mu, c)$ para todo $c \ge 0.02$ y $\mu > 0$.
+
+**Demostración.** La función es `replicas(μ).takeWhile(_ > c).toList`.
+Por el Teorema del §4.1, `replicas(μ)` genera sucesivamente la secuencia
+$m_1, m_2, \ldots$. La función de orden superior `takeWhile(p)` sobre una
+`LazyList` inspecciona cada elemento secuencialmente y detiene la evaluación
+inmediatamente en el primer índice $k+1$ tal que $p(m_{k+1})$ sea falso ($m_{k+1} \le c$).
+Al detenerse, no fuerza la evaluación de ningún elemento subsiguiente. Luego,
+`toList` convierte el prefijo de longitud $k$ en una `List` finita inmutable.
+Si $m_1 \le c$, la primera condición falla y retorna $[\,]$. $\blacksquare$
+
+**Garantía de convergencia y terminación.**
+Para asegurar que `takeWhile` termine, la sucesión debe alcanzar un elemento menor
+o igual a $c$. Para magnitudes $m_k > 0.025$:
+
+$$
+m_{k+1} \le 0.8 \cdot m_k + 0.005 < m_k \iff 0.2 \cdot m_k > 0.005 \iff m_k > 0.025
+$$
+
+La sucesión decrece monótonamente a tasa geométrica hasta alcanzar el rango
+$(0, 0.025]$, donde el redondeo fija el valor en a lo sumo $0.02$
+($\rho(0.8 \times 0.02) = \rho(0.016) = 0.02$). Para cualquier umbral sensible
+convencional ($c \ge 0.02$), la sucesión cruzará el umbral en un número finito de
+pasos $O(\log_{0.8}(c / \mu))$, asegurando que la evaluación perezosa se detiene
+siempre. $\blacksquare$

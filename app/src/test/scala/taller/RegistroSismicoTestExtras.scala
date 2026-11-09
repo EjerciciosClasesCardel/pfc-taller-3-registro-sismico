@@ -136,4 +136,98 @@ class RegistroSismicoTestExtras extends AnyFunSuite {
     def comoConjuntos(m: Map[String, List[Sismo]]) = m.map { case (k, v) => (k, v.toSet) }
     assert(comoConjuntos(porRegion(otro.reverse)) == comoConjuntos(porRegion(otro)))
   }
+
+  // ===========================================================================
+  // Punto 3 — consultas seguras
+  // ===========================================================================
+  test("P3 propio: conteoSeguro responde el conteo de una región presente") {
+    assert(conteoSeguro(otro)("Huila") == 1)
+    assert(conteoSeguro(otro)("Narino") == 3)
+  }
+  test("P3 propio: conteoSeguro responde cero por una región ausente") {
+    assert(conteoSeguro(otro)("Atlantico") == 0)
+  }
+  test("P3 propio: conteoSeguro sobre el registro vacío responde cero") {
+    assert(conteoSeguro(vacio)("Nariño") == 0)
+  }
+  test("P3 propio: maximaDe devuelve la máxima de una región presente") {
+    assert(maximaDe(otro, "Cauca") == Some(5.5))
+    assert(maximaDe(otro, "Huila") == Some(3.0))
+  }
+  test("P3 propio: maximaDe devuelve None por una región ausente") {
+    assert(maximaDe(otro, "Guajira") == None)
+  }
+  test("P3 propio: maximaDe sobre el registro vacío devuelve None") {
+    assert(maximaDe(vacio, "Nariño") == None)
+  }
+  test("P3 propio: regionMasActiva devuelve la región con mayor conteo de sismos") {
+    // En 'otro', Narino tiene 3 sismos, Cauca 2 y Huila 1; gana Narino por mayoría estricta.
+    assert(regionMasActiva(otro) == Some("Narino"))
+  }
+  test("P3 propio: regionMasActiva desempata alfabéticamente en empate") {
+    val empateDos = List(
+      Sismo(Fecha(2024, 1), "Narino", 4.0, 10),
+      Sismo(Fecha(2024, 2), "Cauca", 4.0, 20))
+    // Ambos tienen 1 sismo: gana Cauca por orden alfabético ("Cauca" < "Narino")
+    assert(regionMasActiva(empateDos) == Some("Cauca"))
+  }
+  test("P3 propio: regionMasActiva desempata entre tres empatadas") {
+    val empateTres = List(
+      Sismo(Fecha(2024, 1), "Zulia", 4.0, 10),
+      Sismo(Fecha(2024, 1), "Arauca", 4.0, 10),
+      Sismo(Fecha(2024, 1), "Amazonas", 4.0, 10))
+    assert(regionMasActiva(empateTres) == Some("Amazonas"))
+  }
+
+  // ===========================================================================
+  // Punto 4 — réplicas perezosas
+  // ===========================================================================
+  test("P4 propio: replicas de 6.0, las tres primeras") {
+    assert(replicas(6.0).take(3).toList == List(6.0, 4.8, 3.84))
+  }
+
+  test("P4 propio: replicas de 10.0, las cinco primeras") {
+    assert(replicas(10.0).take(5).toList == List(10.0, 8.0, 6.4, 5.12, 4.1))
+  }
+
+  test("P4 propio: replicas de 2.5 llega exacto a 1.6") {
+    assert(replicas(2.5).take(3).toList == List(2.5, 2.0, 1.6))
+  }
+
+  test("P4 propio: replicas arranca en la magnitud redondeada") {
+    assert(replicas(9.99).head == 9.99)
+  }
+
+  test("P4 propio: replicas materializa muchos elementos sin colgarse") {
+    assert(replicas(7.7).take(150).toList.length == 150)
+  }
+
+  test("P4 propio: la cadena de redondeo de 4.0 baja de dos en dos decimales") {
+    // Cada elemento es el 80 % del anterior, redondeado a dos decimales:
+    // 4.0, 3.2, 2.56, 2.05, 1.64, 1.31, 1.05, 0.84, 0.67, 0.54.
+    assert(replicasSensibles(4.0, 0.5) ==
+      List(4.0, 3.2, 2.56, 2.05, 1.64, 1.31, 1.05, 0.84, 0.67, 0.54))
+  }
+
+  test("P4 propio: replicasSensibles corta en el primer elemento que no supera") {
+    // 6.0, 4.8 y 3.84 superan 3.5; la siguiente, 3.07, ya no.
+    assert(replicasSensibles(6.0, 3.5) == List(6.0, 4.8, 3.84))
+  }
+
+  test("P4 propio: replicasSensibles con mínimo apenas menor que la primera") {
+    // Solo la primera (4.0) supera 3.99: la segunda es 3.2.
+    assert(replicasSensibles(4.0, 3.99) == List(4.0))
+  }
+
+  test("P4 propio: replicasSensibles con mínimo igual a la magnitud da vacía") {
+    // El mínimo es estricto: 4.0 no supera a 4.0.
+    assert(replicasSensibles(4.0, 4.0) == List())
+  }
+
+  test("P4 propio: replicasSensibles cuando la primera no supera el mínimo") {
+    assert(replicasSensibles(0.5, 1.0) == List())
+  }
+
+
 }
+

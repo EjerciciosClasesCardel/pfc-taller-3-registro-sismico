@@ -60,23 +60,33 @@ class RegistroSismico {
   // Punto 3: consultas seguras --------------------------------------------------
 
   /** Un mapa que responde cero por las regiones que no están en el registro. */
-  def conteoSeguro(r: Registro): Map[String, Int] = ???
+  def conteoSeguro(r: Registro): Map[String, Int] =
+    conteoPorRegion(r).withDefaultValue(0)
 
   /** La magnitud máxima de una región, o vacío si no hay registros suyos. */
-  def maximaDe(r: Registro, region: String): Option[Double] = ???
+  def maximaDe(r: Registro, region: String): Option[Double] =
+    magnitudMaxima(r).get(region)
 
   /** La región con más sismos; en empate, la primera en orden alfabético. */
-  def regionMasActiva(r: Registro): Option[String] = ???
+  def regionMasActiva(r: Registro): Option[String] =
+    conteoPorRegion(r).toList
+      .sortBy {case (region , n) => (-n, region) }
+      .headOption
+      .map(_._1)
 
   // Punto 4: réplicas perezosas -------------------------------------------------
 
   def redondear(x: Double): Double = Math.round(x * 100.0) / 100.0
 
   /** La secuencia infinita que empieza en la magnitud y multiplica por 0.8. */
-  def replicas(magnitud: Double): LazyList[Double] = ???
+  def replicas(magnitud: Double): LazyList[Double] = {
+    val m = redondear(magnitud)
+    m #:: replicas(m * 0.8)
+  }
 
   /** Las réplicas mientras superen el mínimo, incluida la primera. */
-  def replicasSensibles(magnitud: Double, minimo: Double): List[Double] = ???
+  def replicasSensibles(magnitud: Double, minimo: Double): List[Double] =
+    replicas(magnitud).takeWhile(_ > minimo).toList
 
   // Punto 5: informe combinado --------------------------------------------------
 
