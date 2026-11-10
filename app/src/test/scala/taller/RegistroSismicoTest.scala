@@ -66,6 +66,44 @@ class RegistroSismicoTest extends AnyFunSuite {
     assert(paresCercanos(registro, 5.0).forall { case (a, b) => a != b })
   }
 
+
+  // Punto 1 Propio ------------------------------------------------------------
+  test("P1-1 fuertes: umbral negativo deja pasar todos los sismos"){
+    assert(fuertes(registro, -1.0).length == 7)
+  }
+
+  test("P1-2 fuertes: umbral exactamente igual a una magnitud es estricto"){
+    assert(!fuertes(registro, 5.3).contains("Valle"))
+    assert(fuertes(registro, 5.2).contains("Valle"))
+  }
+
+  test("P1-3 fuertes: sobre registro vacío da lista vacía"){
+    assert(fuertes(vacio, 0.0) == List())
+  }
+
+  test("P1-4 enRegion: región con varios sismos devuelve todas sus magnitudes en orden"){
+    assert(enRegion(registro, "Choco") == List(6.0, 3.1))
+  }
+
+  test("P1-5 enRegion: distingue mayúsculas/minúsculas(no hay 'valle')"){
+    assert(enRegion(registro, "valle") == List())
+  }
+
+  test("P1-6 paresCercanos: dif = 0.0 solo empareja magnitudes idénticas"){
+    assert(paresCercanos(registro, 0.0) == List())
+  }
+
+  test("P1-7 paresCercanos: umbral grande empareja todas las regiones"){
+    assert(paresCercanos(registro, 100.0).length == 3)
+  }
+
+  test("P1-8 paresCercanos: una sola región no produce parejas"){
+    val soloValle = List(Sismo(Fecha(2025, 1), "Valle", 4.0,10))
+    assert(paresCercanos(soloValle, 10.0)==List())
+  }
+
+
+
   // Punto 2 -------------------------------------------------------------------
 
   test("porRegion: agrupa los siete sismos en tres regiones") {
@@ -90,6 +128,40 @@ class RegistroSismicoTest extends AnyFunSuite {
   test("magnitudMaxima: las regiones ausentes no aparecen") {
     assert(!magnitudMaxima(registro).contains("Amazonas"))
   }
+
+
+  // Punto 2 Propio ------------------------------------------------------------
+  test("P2-1 porRegion: cada sismo queda en su región, sin perder ninguno"){
+    val m = porRegion(registro)
+    assert(m("Valle").length == 3)
+    assert(m("Santander").length==2)
+    assert(m("Choco").length==2)
+    assert(m.values.flatten.toList.sortBy(x => (x.region, x.magnitud)) == registro.sortBy(x =>(x.region, x.magnitud)))
+  }
+
+  test("P2-2 porRegion: registro de un solo sismo"){
+    val uno = List(Sismo(Fecha(2025, 1), "Cauca", 3.5, 10))
+    assert(porRegion(uno) == Map("Cauca" ->uno))
+  }
+
+  test("P2-3 conteoPorRegion: una región con tres sismos cuenta tres"){
+    assert(conteoPorRegion(registro)("Valle")==3)
+  }
+
+  test("P2-4 conteoPorRegion: regíon con un único sismo cuenta uno"){
+    val uno = List(Sismo(Fecha(2025, 2),"Nariño", 4.1,20))
+    assert(conteoPorRegion(uno) == Map("Nariño"->1))
+  }
+
+  test("P2-5 magnitudMaxima: con una sola región de un sismo coincide con su magnitud"){
+    val uno = List(Sismo(Fecha(2025,2),"Nariño",4.1,20))
+    assert(magnitudMaxima(uno) == Map("Nariño" -> 4.1))
+  }
+
+  test("P2-6 magnitudMaxima: el máximo no confunde con el último de la lista"){
+    assert(magnitudMaxima(registro)("Choco")==6.0)
+  }
+
 
   // Punto 3 -------------------------------------------------------------------
 
