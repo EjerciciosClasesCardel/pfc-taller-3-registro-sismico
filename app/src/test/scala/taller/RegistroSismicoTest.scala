@@ -185,4 +185,68 @@ class RegistroSismicoTest extends AnyFunSuite {
     assert(informe(registro, 3.0)("Choco").replicas ==
       replicasSensibles(6.0, 3.0).length)
   }
+
+  // PRUEBAS ESTUDIANTES
+  // Punto 1
+
+  // Punto 2
+
+  // Punto 3
+
+  // Punto 4
+  test("replicas: 10.0 primeras tres") {
+    assert(replicas(10.0).take(3).toList == List(10.0, 8.0, 6.4))
+  }
+  test("replicas: primer elemento es la magnitud") {
+    assert(replicas(1.0).head == 1.0)
+  }
+  test("replicas: acceso por indice") {
+    assert(replicas(5.0)(3) == 2.56)
+  }
+  test("replicas: redondeo a dos decimales") {
+    assert(replicas(6.0).take(5).toList == List(6.0, 4.8, 3.84, 3.07, 2.46))
+  }
+  test("replicas: es perezosa, take(10) no se cuelga") {
+    assert(replicas(5.0).take(10).toList.size == 10)
+  }
+
+  // replicasSensibles
+  test("sensibles: 10.0 con minimo 5.0") {
+    assert(replicasSensibles(10.0, 5.0) == List(10.0, 8.0, 6.4, 5.12))
+  }
+  test("sensibles: igual al minimo no cuenta") {
+    assert(replicasSensibles(5.0, 5.0) == List())
+  }
+  test("sensibles: una sola") {
+    assert(replicasSensibles(3.5, 3.0) == List(3.5))
+  }
+  test("sensibles: minimo 2.0") {
+    assert(replicasSensibles(5.0, 2.0) == List(5.0, 4.0, 3.2, 2.56, 2.05))
+  }
+  test("sensibles: minimo mayor que la magnitud") {
+    assert(replicasSensibles(4.0, 3.5) == List(4.0))
+  }
+
+  // Punto 5
+  val un = List(Sismo(Fecha(2025, 1), "Cauca", 5.0, 10))
+
+  test("informe: un solo sismo") {
+    assert(informe(un, 3.0) == Map("Cauca" -> Resumen(1, 5.0, 3)))
+  }
+  test("informe: minimo muy alto, cero replicas") {
+    assert(informe(registro, 10.0)("Valle") == Resumen(3, 5.3, 0))
+  }
+  test("informe: minimo 5.0 sobre el registro") {
+    assert(informe(registro, 5.0) == Map(
+      "Valle" -> Resumen(3, 5.3, 1),
+      "Santander" -> Resumen(2, 5.1, 1),
+      "Choco" -> Resumen(2, 6.0, 1)))
+  }
+  test("informe: usa el sismo mas fuerte de la region") {
+    val r = List(Sismo(Fecha(2025, 1), "A", 3.0, 5), Sismo(Fecha(2025, 2), "A", 6.0, 5))
+    assert(informe(r, 3.0) == Map("A" -> Resumen(2, 6.0, 4)))
+  }
+  test("informe: regiones ausentes no aparecen") {
+    assert(informe(registro, 3.0).get("Amazonas") == None)
+  }
 }
