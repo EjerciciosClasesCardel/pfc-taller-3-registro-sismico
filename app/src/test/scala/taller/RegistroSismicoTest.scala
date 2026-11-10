@@ -104,7 +104,6 @@ class RegistroSismicoTest extends AnyFunSuite {
 
 
 
-
   // Punto 2 -------------------------------------------------------------------
 
   test("porRegion: agrupa los siete sismos en tres regiones") {
@@ -129,6 +128,40 @@ class RegistroSismicoTest extends AnyFunSuite {
   test("magnitudMaxima: las regiones ausentes no aparecen") {
     assert(!magnitudMaxima(registro).contains("Amazonas"))
   }
+
+
+  // Punto 2 Propio ------------------------------------------------------------
+  test("P2-1 porRegion: cada sismo queda en su región, sin perder ninguno"){
+    val m = porRegion(registro)
+    assert(m("Valle").length == 3)
+    assert(m("Santander").length==2)
+    assert(m("Choco").length==2)
+    assert(m.values.flatten.toList.sortBy(x => (x.region, x.magnitud)) == registro.sortBy(x =>(x.region, x.magnitud)))
+  }
+
+  test("P2-2 porRegion: registro de un solo sismo"){
+    val uno = List(Sismo(Fecha(2025, 1), "Cauca", 3.5, 10))
+    assert(porRegion(uno) == Map("Cauca" ->uno))
+  }
+
+  test("P2-3 conteoPorRegion: una región con tres sismos cuenta tres"){
+    assert(conteoPorRegion(registro)("Valle")==3)
+  }
+
+  test("P2-4 conteoPorRegion: regíon con un único sismo cuenta uno"){
+    val uno = List(Sismo(Fecha(2025, 2),"Nariño", 4.1,20))
+    assert(conteoPorRegion(uno) == Map("Nariño"->1))
+  }
+
+  test("P2-5 magnitudMaxima: con una sola región de un sismo coincide con su magnitud"){
+    val uno = List(Sismo(Fecha(2025,2),"Nariño",4.1,20))
+    assert(magnitudMaxima(uno) == Map("Nariño" -> 4.1))
+  }
+
+  test("P2-6 magnitudMaxima: el máximo no confunde con el último de la lista"){
+    assert(magnitudMaxima(registro)("Choco")==6.0)
+  }
+
 
   // Punto 3 -------------------------------------------------------------------
 
