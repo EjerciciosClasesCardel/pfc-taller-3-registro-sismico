@@ -17,7 +17,7 @@ la nota.
 | Nombre completo           | Código  |
 |---------------------------|---------|
 | Sebastian Castro Cárdenas| 2559772 |
-|                           |         |
+| David Alejandro López Álvarez | 2559790 |
 |                           |         |
 |                           |         |
 
