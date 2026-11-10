@@ -43,11 +43,13 @@ class RegistroSismico {
 
   // Punto 2: agrupar con mapas --------------------------------------------------
 
-  def porRegion(r: Registro): Map[String, List[Sismo]] = ???
+  def porRegion(r: Registro): Map[String, List[Sismo]] = r.groupBy(_.region)
 
-  def conteoPorRegion(r: Registro): Map[String, Int] = ???
+  def conteoPorRegion(r: Registro): Map[String, Int] =
+    r.groupBy(_.region).view.mapValues(_.length).toMap
 
-  def magnitudMaxima(r: Registro): Map[String, Double] = ???
+  def magnitudMaxima(r: Registro): Map[String, Double] =
+    r.groupBy(_.region).view.mapValues(sismos => sismos.map(_.magnitud).max).toMap
 
   // Punto 3: consultas seguras ------------------------------------------------
 
