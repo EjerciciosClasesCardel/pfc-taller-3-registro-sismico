@@ -20,6 +20,12 @@ la nota.
 |                          |         |
 |                          |         |
 |                          |         |
+| Nombre completo           | Código  |
+|---------------------------|---------|
+| Sebastian Castro Cárdenas| 2559772 |
+|                           |         |
+|                           |         |
+|                           |         |
 
 ## Cómo está organizado el proyecto
 
