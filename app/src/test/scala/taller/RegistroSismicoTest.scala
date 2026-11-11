@@ -328,3 +328,34 @@ class RegistroSismicoTest extends AnyFunSuite {
       replicasSensibles(6.0, 3.0).length)
   }
 }
+// Punto 5 Propio ------------------------------------------------------------
+
+test("P5-1 informe: con mínimo alto, cada región tiene exactamente 1 réplica (la inicial)") {
+  val m = informe(registro, 100.0)
+  assert(m.values.forall(_.replicas == 1))
+}
+
+test("P5-2 informe: región de un único sismo tiene conteo 1 y réplicas correctas") {
+  val uno = List(Sismo(Fecha(2025, 2), "Cauca", 3.2, 15))
+  assert(informe(uno, 2.5) == Map("Cauca" -> Resumen(1, 3.2, 2)))
+}
+
+test("P5-3 informe: el conteo de Valle es 3, independiente del mínimo") {
+  assert(informe(registro, 0.5)("Valle").sismos == 3)
+}
+
+test("P5-4 informe: la máxima de cada región es la de magnitudMaxima") {
+  val m = informe(registro, 2.0)
+  assert(m("Valle").maxima == 5.3)
+  assert(m("Santander").maxima == 5.1)
+  assert(m("Choco").maxima == 6.0)
+}
+
+test("P5-5 informe: con mínimo 4.0, las réplicas cambian respecto a mínimo 3.0") {
+  assert(informe(registro, 4.0)("Choco").replicas == 2)
+}
+
+test("P5-6 informe: registro vacío da mapa vacío con cualquier mínimo") {
+  assert(informe(vacio, 0.0) == Map())
+  assert(informe(vacio, 5.0) == Map())
+}
