@@ -89,7 +89,6 @@ def paresCercanos(r: Registro, dif: Double): List[(String, String)] = {
     if cercanas(a, b)
   } yield (a, b)
 }
-```
 
 Esta función tiene tres `for` y una función auxiliar. Se traducen así:
 
@@ -339,3 +338,4 @@ flowchart TD
 
 Todos los `for` del taller llevan `yield` y producen una colección nueva. Ninguno es un `for` sin `yield`, que se traduciría a `foreach` y sería un ciclo iterativo.
 
+Todos los for del taller tienen yield y producen una colección nueva. Ninguno es un for sin yield (que se traduciría a foreach y sería un ciclo iterativo, prohibido en el curso).
