@@ -17,9 +17,9 @@ la nota.
 | Nombre completo | Código |
 |---|---|
 | | |
-| | |
-| | |
-| | |
+| Karen Dayana Sepulveda Rendón | 2559773 |
+| John Freddy Hurtado Valencia | 2559863 |
+| Maria Valentina Ospina Espinosa | 2559760 |
 
 ## Cómo está organizado el proyecto
 
