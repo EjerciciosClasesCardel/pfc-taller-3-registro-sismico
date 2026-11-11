@@ -33,11 +33,13 @@ class RegistroSismico {
     val ordenRegiones = (for(reg <- r) yield reg.region).distinct
 
     (for{
-      reg1 <- r
-      reg2 <- r
-      if reg1.region != reg2.region
+      x <- ordenRegiones
+      xs <- ordenRegiones.dropWhile(_ != x).drop(1)
+
+      reg1 <- r if x == reg1.region
+      reg2 <- r if xs == reg2.region
+
       if (reg1.magnitud - reg2.magnitud).abs <= dif
-      if ordenRegiones.indexOf(reg1.region) < ordenRegiones.indexOf(reg2.region)
     }yield (reg1.region, reg2.region)).distinct
     
   }

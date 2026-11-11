@@ -66,6 +66,28 @@ class RegistroSismicoTest extends AnyFunSuite {
     assert(paresCercanos(registro, 5.0).forall { case (a, b) => a != b })
   }
 
+  // Punto 1 | Pruebas Propias -------------------------------------------------
+  test("fuertes [+]: los que superan 4.0, en orden y conservando los repetidos") {
+    assert(fuertes(registro, 4.0) == List("Valle", "Santander", "Choco", "Santander", "Valle"))
+  }
+  
+  test("fuertes [+]: sobre el registro vacio no hay regiones"){
+    assert(fuertes(vacio, 5.0) == List())
+  }
+
+  test("enRegion [+]: las magnitudes del Chocó"){
+    assert(enRegion(registro, "Choco") == List(6.0, 3.1))
+  }
+
+  test("enRegion [+]: las magnitudes de Santander"){
+    assert(enRegion(registro, "Santander") == List(5.1, 4.7))
+  }
+
+  test("paresCercanos [+]: con 0.7 salen (Valle, Santander) y (Valle, Choco)"){
+    assert(paresCercanos(registro, 0.7) == List(("Valle", "Santander"),("Valle","Choco")))
+  }
+
+
   // Punto 2 -------------------------------------------------------------------
 
   test("porRegion: agrupa los siete sismos en tres regiones") {
