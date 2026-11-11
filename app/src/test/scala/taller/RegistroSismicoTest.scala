@@ -113,6 +113,29 @@ class RegistroSismicoTest extends AnyFunSuite {
     assert(!magnitudMaxima(registro).contains("Amazonas"))
   }
 
+  // Punto 2 - PRUEBAS PROPIAS---------------------------------------------------------------
+
+  test("porRegion: la region Valle contiene 3 sismos"){
+    assert(porRegion(registro)("Valle").length ==3)
+  }
+
+  test("porRegion: Santarder contiene 2 sismos"){
+    assert(porRegion(registro)("Santander").length == 2)
+  }
+
+  test("conteoPorRegion: Choco tiene dos regisdtros") {
+    assert(conteoPorRegion(registro)("Choco") == 2)
+  }
+
+  test("conteoPorRegion: no incluye regiones inexistentes"){
+    assert(!conteoPorRegion(registro).contains("Amazonas"))
+  }
+
+  test("magnitudMaxima: Valle tiene una magnitud maxima superior a 5") {
+   assert(magnitudMaxima(registro)("Valle")> 5.0)
+  }
+
+
   // Punto 3 -------------------------------------------------------------------
 
   test("conteoSeguro: una región desconocida responde cero") {
