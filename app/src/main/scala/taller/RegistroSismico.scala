@@ -48,10 +48,19 @@ class RegistroSismico {
     conteoPorRegion(r).withDefaultValue(0)
 
   /** La magnitud máxima de una región, o vacío si no hay registros suyos. */
-  def maximaDe(r: Registro, region: String): Option[Double] = ???
+  def maximaDe(r: Registro, region: String): Option[Double] =
+    magnitudMaxima(r).get(region)
 
   /** La región con más sismos; en empate, la primera en orden alfabético. */
-  def regionMasActiva(r: Registro): Option[String] = ???
+  def regionMasActiva(r: Registro): Option[String] = {
+    val conteo = conteoPorRegion(r)
+    if (conteo.isEmpty) None
+    else {
+      // Ordenadas alfabéticamente, el maxBy se queda con la primera.
+      val ordenadas = conteo.keys.toList.sorted
+      Some(ordenadas.maxBy(region => conteo(region)))
+    }
+  }
 
   // Punto 4: réplicas perezosas -------------------------------------------------
 
