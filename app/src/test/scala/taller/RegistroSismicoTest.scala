@@ -192,7 +192,33 @@ class RegistroSismicoTest extends AnyFunSuite {
   // Punto 2
 
   // Punto 3
+  test("propia conteoSeguro: Choco y Santander responden dos") {
+    assert(conteoSeguro(registro)("Choco") == 2)
+    assert(conteoSeguro(registro)("Santander") == 2)
+  }
 
+  test("propia conteoSeguro: preguntar por una región ausente no la agrega") {
+    val c = conteoSeguro(registro)
+    assert(c("Cauca") == 0)
+    assert(!c.contains("Cauca"))
+    assert(c.size == 3)
+  }
+
+  test("propia maximaDe: Valle, Santander y una región que no está") {
+    assert(maximaDe(registro, "Valle") == Some(5.3))
+    assert(maximaDe(registro, "Santander") == Some(5.1))
+    assert(maximaDe(registro, "Cauca") == None)
+  }
+
+  test("propia regionMasActiva: con los dos primeros sismos hay empate y gana Santander") {
+    // Valle y Santander tienen un sismo cada una; Santander va antes en el alfabeto.
+    assert(regionMasActiva(registro.take(2)) == Some("Santander"))
+  }
+
+  test("propia regionMasActiva: con los últimos cuatro sismos gana el Choco") {
+    assert(regionMasActiva(registro.drop(3)) == Some("Choco"))
+    assert(regionMasActiva(registro.reverse) == Some("Valle"))
+  }
   // Punto 4
   test("replicas: 10.0 primeras tres") {
     assert(replicas(10.0).take(3).toList == List(10.0, 8.0, 6.4))
