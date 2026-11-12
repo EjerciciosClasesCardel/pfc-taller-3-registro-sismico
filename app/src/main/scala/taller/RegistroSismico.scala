@@ -56,7 +56,7 @@ class RegistroSismico {
     val conteo = conteoPorRegion(r)
     if (conteo.isEmpty) None
     else {
-      // Ordenadas alfabéticamente, maxBy se queda con la primera que tiene más.
+      // Ordenadas alfabéticamente, el maxBy se queda con la primera.
       val ordenadas = conteo.keys.toList.sorted
       Some(ordenadas.maxBy(region => conteo(region)))
     }
