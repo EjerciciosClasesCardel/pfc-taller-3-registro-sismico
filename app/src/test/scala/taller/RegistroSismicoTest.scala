@@ -211,7 +211,6 @@ class RegistroSismicoTest extends AnyFunSuite {
   }
 
   test("propia regionMasActiva: con los dos primeros sismos hay empate y gana Santander") {
-    // Valle y Santander tienen un sismo cada una; Santander va antes en el alfabeto.
     assert(regionMasActiva(registro.take(2)) == Some("Santander"))
   }
 
