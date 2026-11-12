@@ -16,10 +16,7 @@ la nota.
 
 | Nombre completo | Código |
 |---|---|
-| | |
-| | |
-| | |
-| | |
+| Nicolas Restrepo Grajales | 2380471-2724 |
 
 ## Cómo está organizado el proyecto
 
