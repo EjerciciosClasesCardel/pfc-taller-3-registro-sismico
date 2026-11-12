@@ -17,11 +17,6 @@ la nota.
 | Nombre completo          | Código  |
 |--------------------------|---------|
 | Santiago Velandia Lozano | 2559822 |
-|                          |         |
-|                          |         |
-|                          |         |
-| Nombre completo           | Código  |
-|---------------------------|---------|
 | Sebastian Castro Cárdenas| 2559772 |
 | David Alejandro López Álvarez | 2559790 |
 |                           |         |
