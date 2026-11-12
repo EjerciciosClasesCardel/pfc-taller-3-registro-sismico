@@ -277,3 +277,289 @@ s_0 = (a_1, \text{List}(a_2, \ldots, a_k)) \implies a_1 = f(\text{List}(a_1))
 $k$ iteraciones, $l = \text{List}()$.
 
 Esto implica que $P_f(L) == \text{maxAux}(L.\text{head}, L.\text{tail}) == f(L)$
+
+
+## Notación común
+
+Un sismo es $s = (f, \rho, \mu, p)$ con región $\rho(s)$ y magnitud $\mu(s)$.
+Un registro es una lista $r = \text{List}(s_1, \ldots, s_n)$, y se define
+recursivamente: el registro vacío $\text{List}()$ es el caso base, y
+$s :: r'$ es el registro que añade el sismo $s$ al frente de $r'$.
+
+Para una región $g$, se define el sub-registro de esa región:
+
+```math
+S_g(r) = \text{List}(s \in r \mid \rho(s) = g)
+```
+
+y el conjunto de regiones presentes $R(r) = \{\rho(s) \mid s \in r\}$.
+
+---
+
+## Punto 4: réplicas perezosas
+
+Este punto no recorre un registro: construye una secuencia infinita. El
+argumento de inducción es distinto al de los demás puntos: cada elemento se
+calcula cuando se pide, así que las propiedades se enuncian sobre **la
+posición $k$** y sobre **los primeros $n$ elementos**, no sobre toda la
+secuencia a la vez.
+
+### 4.1 Especificación
+
+Sea $m$ la magnitud inicial y $\mu_{min}$ el mínimo. Se supone $m > 0$ y
+$\mu_{min} \geq 0$ (las magnitudes del registro son positivas; ver 4.6 para el
+caso en que $\mu_{min}$ es negativo).
+
+El redondeo a dos decimales que usa el programa, `Math.round(x * 100.0) / 100.0`,
+es:
+
+```math
+\text{red}(x) = \frac{\lfloor 100\,x + \tfrac{1}{2} \rfloor}{100}
+```
+
+La secuencia ideal de magnitudes sin redondear es $a_0 = m$ y
+$a_{k+1} = 0.8 \cdot a_k$, es decir $a_k = m \cdot 0.8^k$. La secuencia de
+réplicas es:
+
+```math
+r_k = \text{red}(a_k) \qquad k \in \mathbb{N}
+```
+
+Lo que el enunciado pide es:
+
+- $\text{replicas}(m) = (r_0, r_1, r_2, \ldots)$.
+- $\text{replicasSensibles}(m, \mu_{min}) = \text{List}(r_0, \ldots, r_{n-1})$,
+  donde $n = \min\{\,k \in \mathbb{N} \mid r_k \leq \mu_{min}\,\}$. Es decir, las
+  réplicas mientras **superen** el mínimo.
+
+### 4.2 Elemento $k$ de `replicas`
+
+**Lema 1 (`iterate`).** Sea $\text{xs} = \text{LazyList.iterate}(s)(f)$. Para
+todo $k \in \mathbb{N}$, $\text{xs}(k) = f^k(s)$, donde $f^0(s) = s$ y
+$f^{k+1}(s) = f(f^k(s))$.
+
+_Demostración._ Por la definición de `iterate`,
+$\text{iterate}(s)(f) = s \;\#::\; \text{iterate}(f(s))(f)$. Inducción sobre
+$k$ (para todo valor de $s$):
+
+**Caso base:** $k = 0$. $\text{xs}(0) = \text{head}(\text{xs}) = s = f^0(s)$.
+
+**Caso de inducción:** $k + 1$. Hipótesis de inducción (HI): para todo $s'$,
+$\text{iterate}(s')(f)(k) = f^k(s')$.
+
+```math
+\text{xs}(k+1) = \text{tail}(\text{xs})(k) = \text{iterate}(f(s))(f)(k) \overset{\text{HI}}{=} f^k(f(s)) = f^{k+1}(s)
+```
+
+Por lo tanto $\text{xs}(k) = f^k(s)$ para todo $k$. $\blacksquare$
+
+**Lema 2 (`map`).** Para toda secuencia $\text{xs}$ y función $g$,
+$\text{xs.map}(g)(k) = g(\text{xs}(k))$. Es la definición de `map`: aplica $g$
+a cada elemento conservando la posición.
+
+**Teorema A.** Para todo $k \in \mathbb{N}$, $\text{replicas}(m)(k) = r_k$.
+
+_Demostración._ Con $f(x) = 0.8\,x$, el Lema 1 da
+$\text{iterate}(m)(f)(k) = f^k(m) = m \cdot 0.8^k = a_k$. Por el Lema 2,
+$\text{replicas}(m)(k) = \text{red}(a_k) = r_k$. $\blacksquare$
+
+Comprobación con $m = 5.0$: $r_0 = 5.0$, $r_1 = 4.0$, $r_2 = 3.2$ y
+$r_3 = \text{red}(2.56) = 2.56$, que es lo que da `replicas(5.0).take(4)`.
+
+### 4.3 La secuencia es decreciente
+
+**Lema 3.** Si $m > 0$, entonces $r_{k+1} \leq r_k$ para todo $k$.
+
+_Demostración._ Como $a_k = m \cdot 0.8^k > 0$, se tiene
+$a_{k+1} = 0.8\,a_k < a_k$. La función $\text{red}$ es monótona no decreciente:
+si $x \leq y$ entonces $100x + \tfrac12 \leq 100y + \tfrac12$, y como
+$\lfloor \cdot \rfloor$ es monótona, $\text{red}(x) \leq \text{red}(y)$. Entonces:
+
+```math
+r_{k+1} = \text{red}(a_{k+1}) \leq \text{red}(a_k) = r_k \qquad \blacksquare
+```
+
+(Es no estricta: dos réplicas seguidas pueden redondear al mismo valor cuando
+son muy pequeñas.)
+
+### 4.4 `replicasSensibles` devuelve exactamente las réplicas sensibles
+
+**Lema 4 (terminación).** Si $m > 0$, existe $k$ con $r_k \leq \mu_{min}$.
+
+_Demostración._ $a_k < 0.005 \iff 0.8^k < \dfrac{0.005}{m} \iff k > \dfrac{\ln(200\,m)}{\ln(5/4)}$.
+Para todo $k$ mayor que esa cota, $a_k < 0.005$, luego
+$100\,a_k + \tfrac12 < 1$ y $r_k = \text{red}(a_k) = 0 \leq \mu_{min}$, porque
+$\mu_{min} \geq 0$. $\blacksquare$
+
+Por el Lema 4 el conjunto $\{k \mid r_k \leq \mu_{min}\}$ no es vacío, así que
+$n = \min\{k \mid r_k \leq \mu_{min}\}$ existe.
+
+**Teorema B.** $\text{replicasSensibles}(m, \mu_{min}) = \text{List}(r_0, \ldots, r_{n-1})$,
+y además $\{\,k \mid r_k > \mu_{min}\,\} = \{0, \ldots, n-1\}$: no hay ninguna réplica
+sensible fuera de ese prefijo.
+
+_Demostración._
+
+1. Por el Teorema A, el elemento $k$ de `replicas(m)` es $r_k$.
+2. `takeWhile(p)` entrega el prefijo más largo de elementos que cumplen $p$:
+   avanza mientras $p$ sea verdadero y se detiene en el primer elemento que
+   falla. Aquí $p(x) \equiv x > \mu_{min}$.
+3. Por la definición de $n$ como mínimo, para todo $k < n$ se cumple
+   $r_k > \mu_{min}$, y $r_n \leq \mu_{min}$. Entonces `takeWhile` deja pasar
+   exactamente $r_0, \ldots, r_{n-1}$ y se detiene en $r_n$.
+4. `toList` convierte ese prefijo finito en `List`, así que el resultado es
+   $\text{List}(r_0, \ldots, r_{n-1})$.
+5. Para la segunda afirmación: si $k \geq n$, por el Lema 3
+   $r_k \leq r_n \leq \mu_{min}$, así que ninguna réplica posterior supera el
+   mínimo. $\blacksquare$
+
+Comprobación:
+
+```math
+m = 5.0,\ \mu_{min} = 3.0:\quad r = (5.0,\ 4.0,\ 3.2,\ 2.56,\ \ldots) \Rightarrow n = 3 \Rightarrow \text{List}(5.0, 4.0, 3.2)
+```
+
+```math
+m = 2.0,\ \mu_{min} = 3.0:\quad r_0 = 2.0 \leq 3.0 \Rightarrow n = 0 \Rightarrow \text{List}()
+```
+
+El mínimo es estricto: si $r_k = \mu_{min}$ la réplica no entra, porque
+$r_k > \mu_{min}$ es falso.
+
+### 4.5 No se calculan más elementos de los pedidos
+
+**Proposición.** Con memoización de cada celda del `LazyList`:
+
+- `replicas(m).take(j).toList` calcula exactamente $j$ elementos.
+- $\text{replicasSensibles}(m, \mu_{min})$ calcula exactamente $n + 1$ elementos:
+  $r_0, \ldots, r_n$.
+
+_Argumento._ Un elemento solo se calcula cuando un consumidor lo pide.
+`toList` pide elementos de uno en uno, de la posición $0$ en adelante, y solo
+pide el siguiente si el anterior fue aceptado. Con `take(j)` se aceptan las
+posiciones $0, \ldots, j-1$ y el consumo termina. Con `takeWhile`, por el
+Teorema B se aceptan $0, \ldots, n-1$ y la posición $n$ se evalúa solo para
+comprobar que falla. Ninguna posición mayor se pide. La memoria usada es
+proporcional a $n$, no al largo infinito de la secuencia.
+
+### 4.6 Condiciones sobre los datos y precisión
+
+- **Si $\mu_{min} < 0$ la función no termina.** Entonces $r_k \geq 0 > \mu_{min}$
+  para todo $k$, nunca se cumple $r_k \leq \mu_{min}$ (el Lema 4 necesita
+  $\mu_{min} \geq 0$), `takeWhile` no se detiene y `toList` se cuelga. Por eso se
+  exige $\mu_{min} \geq 0$. Con $m \leq 0$ tampoco vale el Lema 3.
+- **Punto flotante.** El programa calcula $a_{k+1}$ multiplicando en `Double`,
+  no evalúa $m \cdot 0.8^k$ en los reales, así que los valores crudos tienen
+  errores del orden de $10^{-16}$ (por ejemplo, $3.2 \cdot 0.8$ da
+  `2.5600000000000005`). El argumento es exacto sobre los reales; en `Double`
+  solo podría cambiar un resultado si $100\,a_k + \tfrac12$ cae a $10^{-14}$
+  de un entero, y el redondeo a dos decimales absorbe ese error en los casos
+  del taller.
+
+### 4.7 Independencia del orden de recorrido
+
+El punto 4 no recorre un registro. La secuencia $(r_k)$ está determinada solo
+por $(m, \mu_{min})$ y su orden es parte de la definición (la posición $k$ es
+el número de réplica), así que la función es pura: las mismas entradas dan
+siempre el mismo resultado. Cuando el punto 5 la usa sobre la magnitud máxima
+de una región, el resultado depende solo de ese valor máximo, y por tanto no
+depende del orden de los sismos del registro (ver Teorema D).
+
+---
+
+## Punto 5: informe combinado
+### 5.1 Especificación
+
+Para un registro $r$ y un mínimo $\mu_{min}$, para cada región
+$g \in R(r)$ se definen:
+
+```math
+c_g = \text{len}(S_g(r)), \qquad M_g = \max\{\mu(s) \mid s \in S_g(r)\}, \qquad n_g = \text{len}\bigl(\text{replicasSensibles}(M_g, \mu_{min})\bigr)
+```
+
+El enunciado pide:
+
+```math
+\text{informe}(r, \mu_{min}) = \{\, g \mapsto \text{Resumen}(c_g,\ M_g,\ n_g) \mid g \in R(r) \,\}
+```
+
+Es decir, un mapa cuyas llaves son exactamente las regiones del registro y sin
+entradas para regiones ausentes. Para $r = \text{List}()$ debe ser $\text{Map}()$.
+
+### 5.2 Corrección
+
+**Lema 5 (`porRegion`, del punto 2).** `porRegion(r)` tiene como llaves
+exactamente $R(r)$ y `porRegion(r)(g)` $= S_g(r)$ para toda $g \in R(r)$. Es la
+especificación de `groupBy`, que conserva el orden relativo dentro de cada grupo.
+
+**Teorema C.** Para todo registro $r$ y $\mu_{min} \geq 0$, el programa
+`informe` cumple la especificación 5.1.
+
+_Demostración._ Por inducción estructural sobre $r$.
+
+**Caso base:** $r = \text{List}()$. $R(r) = \emptyset$, y por el Lema 5
+`porRegion(List())` es `Map()`. Un `map` sobre un mapa vacío no visita ninguna
+entrada y devuelve `Map()`. La especificación también da el mapa vacío.
+
+**Caso de inducción:** $r = s :: r'$, con $g_0 = \rho(s)$. La hipótesis de
+inducción (HI) dice que `informe(r')` cumple la especificación. Comparando
+$r$ con $r'$ (el sismo $s$ queda al frente de $S_{g_0}$):
+
+- Si $g \neq g_0$: $S_g(r) = S_g(r')$, así que $c_g$, $M_g$ y $n_g$ no cambian
+  y la entrada coincide con la de $r'$, correcta por HI.
+- Si $g = g_0$: $S_{g_0}(r) = s :: S_{g_0}(r')$, luego $c_{g_0}(r) = c_{g_0}(r') + 1$
+  (o $c_{g_0} = 1$ si $g_0$ era una región nueva), y
+  $M_{g_0}(r) = \max(\mu(s),\ M_{g_0}(r'))$ (o $\mu(s)$ si era nueva).
+  $n_{g_0}$ se recalcula sobre ese nuevo máximo.
+
+Falta ver que el programa calcula bien cada entrada, para $g \in R(r)$:
+
+1. Por el Lema 5, $\text{porRegion}(r)$ contiene el par $(g, S_g(r))$ y las
+   llaves son distintas.
+2. Como $g \in R(r)$, $S_g(r)$ es no vacía, así que
+   `sismos.map(_.magnitud).max` está definido (no lanza excepción) y es $M_g$.
+3. `sismos.length` es $c_g$.
+4. Por el Teorema B, `replicasSensibles(maxima, minimo)` es la lista
+   $\text{List}(r_0, \ldots, r_{n-1})$ de la magnitud $M_g$, y su `length` es
+   $n_g$.
+5. La función del `map` devuelve el par $(g, \text{Resumen}(c_g, M_g, n_g))$,
+   que conserva la llave. Como las llaves de entrada eran distintas, las de
+   salida también, y ninguna entrada pisa a otra. $\blacksquare$
+
+Comprobación con `informe(registro, 3.0)`:
+
+| Región | $S_g$ (magnitudes) | $c_g$ | $M_g$ | $r_0, r_1, \ldots$ | $n_g$ |
+|---|---|:---:|:---:|---|:---:|
+| Valle | 4.2, 3.8, 5.3 | 3 | 5.3 | 5.3, 4.24, 3.39, 2.71 | 3 |
+| Santander | 5.1, 4.7 | 2 | 5.1 | 5.1, 4.08, 3.26, 2.61 | 3 |
+| Choco | 6.0, 3.1 | 2 | 6.0 | 6.0, 4.8, 3.84, 3.07, 2.46 | 4 |
+
+que coincide con el resultado del enunciado.
+
+### 5.3 El resultado no depende del orden de recorrido
+
+**Teorema D.** Si $r'$ es una permutación de $r$, entonces
+$\text{informe}(r', \mu_{min}) = \text{informe}(r, \mu_{min})$.
+
+_Demostración._ Sea $r'$ una permutación de $r$ (los mismos sismos, en otro
+orden).
+
+1. $R(r') = R(r)$: ambos conjuntos contienen las regiones de los mismos
+   sismos. Las llaves del informe coinciden.
+2. Para cada $g$, $S_g(r')$ es una permutación de $S_g(r)$, porque filtrar por
+   región selecciona los mismos sismos. Una permutación no cambia la longitud,
+   así que $c_g(r') = c_g(r)$.
+3. El máximo no depende del orden. La operación $\max$ es conmutativa
+   ($\max(a,b) = \max(b,a)$) y asociativa
+   ($\max(\max(a,b),c) = \max(a,\max(b,c))$), por lo que cualquier forma de
+   combinar los elementos da el mismo valor: el único elemento del conjunto
+   de magnitudes que es mayor o igual que todos los demás. Entonces
+   $M_g(r') = M_g(r)$.
+4. $n_g$ es una función de $(M_g, \mu_{min})$ únicamente (Teorema B), luego
+   $n_g(r') = n_g(r)$.
+5. Dos mapas son iguales cuando tienen las mismas llaves y el mismo valor para
+   cada llave; el orden interno de las entradas no cuenta. Por 1 a 4, todas
+   las entradas coinciden. $\blacksquare$
+
+Esto es lo que garantiza que `groupBy` y los pliegues internos (`length`,
+`max`) puedan recorrer el registro en cualquier orden sin cambiar el informe.
